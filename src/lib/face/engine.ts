@@ -40,12 +40,17 @@ export async function getFaceApi(): Promise<FaceApi> {
       const faceapi = await import("@vladmandic/face-api");
       // Prefer WebGL, fall back to CPU. The WASM backend is not bundled, so we
       // never let tfjs try to fetch its .wasm binaries at runtime.
+      const tf = faceapi.tf as unknown as {
+        setBackend: (name: string) => Promise<boolean>;
+        ready: () => Promise<void>;
+      };
       try {
-        await faceapi.tf.setBackend("webgl");
+        await tf.setBackend("webgl");
       } catch {
-        await faceapi.tf.setBackend("cpu");
+        await tf.setBackend("cpu");
       }
-      await faceapi.tf.ready();
+      await tf.ready();
+
       await Promise.all([
         faceapi.nets.tinyFaceDetector.loadFromUri("/models"),
         faceapi.nets.faceLandmark68Net.loadFromUri("/models"),
