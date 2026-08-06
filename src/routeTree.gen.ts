@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ConsoleRouteImport } from './routes/console'
+import { Route as KioskRouteImport } from './routes/kiosk'
 import { Route as ConsoleIndexRouteImport } from './routes/console.index'
 import { Route as ConsoleEmployeesRouteImport } from './routes/console.employees'
 import { Route as ConsoleEnrollEmployeeIdRouteImport } from './routes/console.enroll.$employeeId'
@@ -29,6 +30,11 @@ const AuthRoute = AuthRouteImport.update({
 const ConsoleRoute = ConsoleRouteImport.update({
   id: '/console',
   path: '/console',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KioskRoute = KioskRouteImport.update({
+  id: '/kiosk',
+  path: '/kiosk',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConsoleIndexRoute = ConsoleIndexRouteImport.update({
@@ -51,6 +57,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/console': typeof ConsoleRouteWithChildren
+  '/kiosk': typeof KioskRoute
   '/console/employees': typeof ConsoleEmployeesRoute
   '/console/': typeof ConsoleIndexRoute
   '/console/enroll/$employeeId': typeof ConsoleEnrollEmployeeIdRoute
@@ -58,6 +65,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/kiosk': typeof KioskRoute
   '/console/employees': typeof ConsoleEmployeesRoute
   '/console': typeof ConsoleIndexRoute
   '/console/enroll/$employeeId': typeof ConsoleEnrollEmployeeIdRoute
@@ -67,6 +75,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/console': typeof ConsoleRouteWithChildren
+  '/kiosk': typeof KioskRoute
   '/console/employees': typeof ConsoleEmployeesRoute
   '/console/': typeof ConsoleIndexRoute
   '/console/enroll/$employeeId': typeof ConsoleEnrollEmployeeIdRoute
@@ -77,6 +86,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/console'
+    | '/kiosk'
     | '/console/employees'
     | '/console/'
     | '/console/enroll/$employeeId'
@@ -84,6 +94,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/kiosk'
     | '/console/employees'
     | '/console'
     | '/console/enroll/$employeeId'
@@ -92,6 +103,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/console'
+    | '/kiosk'
     | '/console/employees'
     | '/console/'
     | '/console/enroll/$employeeId'
@@ -101,6 +113,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   ConsoleRoute: typeof ConsoleRouteWithChildren
+  KioskRoute: typeof KioskRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -124,6 +137,13 @@ declare module '@tanstack/react-router' {
       path: '/console'
       fullPath: '/console'
       preLoaderRoute: typeof ConsoleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kiosk': {
+      id: '/kiosk'
+      path: '/kiosk'
+      fullPath: '/kiosk'
+      preLoaderRoute: typeof KioskRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/console/': {
@@ -169,6 +189,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   ConsoleRoute: ConsoleRouteWithChildren,
+  KioskRoute: KioskRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
