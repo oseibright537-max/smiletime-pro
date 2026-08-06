@@ -29,8 +29,11 @@ function ConsoleLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/auth", search: { next: pathname } });
+    if (!loading && !user) {
+      navigate({ to: "/auth", search: { next: pathname.startsWith("/console") ? pathname : "/console" } });
+    }
   }, [loading, user, navigate, pathname]);
+
 
   if (loading || !user) {
     return (
