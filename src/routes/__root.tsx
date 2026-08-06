@@ -77,11 +77,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "Sentra — AI Facial Recognition Attendance" },
+      {
+        name: "description",
+        content:
+          "Enterprise facial recognition attendance with on-device matching, active liveness checks and role-based HR controls.",
+      },
+      { name: "author", content: "Sentra" },
+      { property: "og:title", content: "Sentra — AI Facial Recognition Attendance" },
+      {
+        property: "og:description",
+        content: "On-device face matching, active liveness and role-based attendance analytics.",
+      },
+
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Lovable" },
