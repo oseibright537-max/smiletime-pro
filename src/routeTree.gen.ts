@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ConsoleRouteImport } from './routes/console'
 import { Route as ConsoleIndexRouteImport } from './routes/console.index'
+import { Route as ConsoleEmployeesRouteImport } from './routes/console.employees'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,16 +35,23 @@ const ConsoleIndexRoute = ConsoleIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ConsoleRoute,
 } as any)
+const ConsoleEmployeesRoute = ConsoleEmployeesRouteImport.update({
+  id: '/employees',
+  path: '/employees',
+  getParentRoute: () => ConsoleRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/console': typeof ConsoleRouteWithChildren
+  '/console/employees': typeof ConsoleEmployeesRoute
   '/console/': typeof ConsoleIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/console/employees': typeof ConsoleEmployeesRoute
   '/console': typeof ConsoleIndexRoute
 }
 export interface FileRoutesById {
@@ -51,14 +59,16 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/console': typeof ConsoleRouteWithChildren
+  '/console/employees': typeof ConsoleEmployeesRoute
   '/console/': typeof ConsoleIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/console' | '/console/'
+  fullPaths: '/' | '/auth' | '/console' | '/console/employees' | '/console/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/console'
-  id: '__root__' | '/' | '/auth' | '/console' | '/console/'
+  to: '/' | '/auth' | '/console/employees' | '/console'
+  id:
+    '__root__' | '/' | '/auth' | '/console' | '/console/employees' | '/console/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -97,14 +107,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConsoleIndexRouteImport
       parentRoute: typeof ConsoleRoute
     }
+    '/console/employees': {
+      id: '/console/employees'
+      path: '/employees'
+      fullPath: '/console/employees'
+      preLoaderRoute: typeof ConsoleEmployeesRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
   }
 }
 
 interface ConsoleRouteChildren {
+  ConsoleEmployeesRoute: typeof ConsoleEmployeesRoute
   ConsoleIndexRoute: typeof ConsoleIndexRoute
 }
 
 const ConsoleRouteChildren: ConsoleRouteChildren = {
+  ConsoleEmployeesRoute: ConsoleEmployeesRoute,
   ConsoleIndexRoute: ConsoleIndexRoute,
 }
 
