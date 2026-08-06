@@ -44,11 +44,14 @@ export async function getFaceApi(): Promise<FaceApi> {
         setBackend: (name: string) => Promise<boolean>;
         ready: () => Promise<void>;
       };
+      let ok = false;
       try {
-        await tf.setBackend("webgl");
+        ok = await tf.setBackend("webgl");
       } catch {
-        await tf.setBackend("cpu");
+        ok = false;
       }
+      if (!ok) await tf.setBackend("cpu").catch(() => false);
+
       await tf.ready();
 
       await Promise.all([
