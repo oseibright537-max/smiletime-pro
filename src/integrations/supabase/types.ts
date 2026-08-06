@@ -14,16 +14,216 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      attendance_events: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          device_label: string | null
+          employee_id: string
+          id: string
+          kind: Database["public"]["Enums"]["attendance_kind"]
+          liveness_score: number | null
+          occurred_at: string
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          device_label?: string | null
+          employee_id: string
+          id?: string
+          kind: Database["public"]["Enums"]["attendance_kind"]
+          liveness_score?: number | null
+          occurred_at?: string
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          device_label?: string | null
+          employee_id?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["attendance_kind"]
+          liveness_score?: number | null
+          occurred_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_events_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      departments: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      employees: {
+        Row: {
+          created_at: string
+          department_id: string | null
+          email: string | null
+          employee_code: string
+          full_name: string
+          id: string
+          job_title: string | null
+          status: Database["public"]["Enums"]["employee_status"]
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          department_id?: string | null
+          email?: string | null
+          employee_code: string
+          full_name: string
+          id?: string
+          job_title?: string | null
+          status?: Database["public"]["Enums"]["employee_status"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          department_id?: string | null
+          email?: string | null
+          employee_code?: string
+          full_name?: string
+          id?: string
+          job_title?: string | null
+          status?: Database["public"]["Enums"]["employee_status"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employees_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      face_embeddings: {
+        Row: {
+          created_at: string
+          embedding: string
+          employee_id: string
+          id: string
+          model: string
+          pose: string
+          quality: number | null
+        }
+        Insert: {
+          created_at?: string
+          embedding: string
+          employee_id: string
+          id?: string
+          model?: string
+          pose?: string
+          quality?: number | null
+        }
+        Update: {
+          created_at?: string
+          embedding?: string
+          employee_id?: string
+          id?: string
+          model?: string
+          pose?: string
+          quality?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "face_embeddings_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_staff: { Args: { _user_id: string }; Returns: boolean }
+      match_face: {
+        Args: { max_distance?: number; probe: string }
+        Returns: {
+          distance: number
+          employee_code: string
+          employee_id: string
+          full_name: string
+        }[]
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "hr" | "manager" | "employee"
+      attendance_kind: "check_in" | "check_out" | "break_start" | "break_end"
+      employee_status: "active" | "suspended" | "terminated"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +350,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "hr", "manager", "employee"],
+      attendance_kind: ["check_in", "check_out", "break_start", "break_end"],
+      employee_status: ["active", "suspended", "terminated"],
+    },
   },
 } as const
