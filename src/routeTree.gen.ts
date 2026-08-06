@@ -10,33 +10,110 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as ConsoleRouteImport } from './routes/console'
+import { Route as KioskRouteImport } from './routes/kiosk'
+import { Route as ConsoleIndexRouteImport } from './routes/console.index'
+import { Route as ConsoleEmployeesRouteImport } from './routes/console.employees'
+import { Route as ConsoleEnrollEmployeeIdRouteImport } from './routes/console.enroll.$employeeId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConsoleRoute = ConsoleRouteImport.update({
+  id: '/console',
+  path: '/console',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KioskRoute = KioskRouteImport.update({
+  id: '/kiosk',
+  path: '/kiosk',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConsoleIndexRoute = ConsoleIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsoleEmployeesRoute = ConsoleEmployeesRouteImport.update({
+  id: '/employees',
+  path: '/employees',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsoleEnrollEmployeeIdRoute = ConsoleEnrollEmployeeIdRouteImport.update({
+  id: '/enroll/$employeeId',
+  path: '/enroll/$employeeId',
+  getParentRoute: () => ConsoleRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/console': typeof ConsoleRouteWithChildren
+  '/kiosk': typeof KioskRoute
+  '/console/employees': typeof ConsoleEmployeesRoute
+  '/console/': typeof ConsoleIndexRoute
+  '/console/enroll/$employeeId': typeof ConsoleEnrollEmployeeIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/kiosk': typeof KioskRoute
+  '/console/employees': typeof ConsoleEmployeesRoute
+  '/console': typeof ConsoleIndexRoute
+  '/console/enroll/$employeeId': typeof ConsoleEnrollEmployeeIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/console': typeof ConsoleRouteWithChildren
+  '/kiosk': typeof KioskRoute
+  '/console/employees': typeof ConsoleEmployeesRoute
+  '/console/': typeof ConsoleIndexRoute
+  '/console/enroll/$employeeId': typeof ConsoleEnrollEmployeeIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/console'
+    | '/kiosk'
+    | '/console/employees'
+    | '/console/'
+    | '/console/enroll/$employeeId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/kiosk'
+    | '/console/employees'
+    | '/console'
+    | '/console/enroll/$employeeId'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/console'
+    | '/kiosk'
+    | '/console/employees'
+    | '/console/'
+    | '/console/enroll/$employeeId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthRoute: typeof AuthRoute
+  ConsoleRoute: typeof ConsoleRouteWithChildren
+  KioskRoute: typeof KioskRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +125,72 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/console': {
+      id: '/console'
+      path: '/console'
+      fullPath: '/console'
+      preLoaderRoute: typeof ConsoleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kiosk': {
+      id: '/kiosk'
+      path: '/kiosk'
+      fullPath: '/kiosk'
+      preLoaderRoute: typeof KioskRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/console/': {
+      id: '/console/'
+      path: '/'
+      fullPath: '/console/'
+      preLoaderRoute: typeof ConsoleIndexRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/console/employees': {
+      id: '/console/employees'
+      path: '/employees'
+      fullPath: '/console/employees'
+      preLoaderRoute: typeof ConsoleEmployeesRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/console/enroll/$employeeId': {
+      id: '/console/enroll/$employeeId'
+      path: '/enroll/$employeeId'
+      fullPath: '/console/enroll/$employeeId'
+      preLoaderRoute: typeof ConsoleEnrollEmployeeIdRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
   }
 }
 
+interface ConsoleRouteChildren {
+  ConsoleEmployeesRoute: typeof ConsoleEmployeesRoute
+  ConsoleIndexRoute: typeof ConsoleIndexRoute
+  ConsoleEnrollEmployeeIdRoute: typeof ConsoleEnrollEmployeeIdRoute
+}
+
+const ConsoleRouteChildren: ConsoleRouteChildren = {
+  ConsoleEmployeesRoute: ConsoleEmployeesRoute,
+  ConsoleIndexRoute: ConsoleIndexRoute,
+  ConsoleEnrollEmployeeIdRoute: ConsoleEnrollEmployeeIdRoute,
+}
+
+const ConsoleRouteWithChildren =
+  ConsoleRoute._addFileChildren(ConsoleRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthRoute: AuthRoute,
+  ConsoleRoute: ConsoleRouteWithChildren,
+  KioskRoute: KioskRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
