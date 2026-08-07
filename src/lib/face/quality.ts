@@ -155,7 +155,7 @@ export function assessFrame(
 
   const pixels = measurePixels(video, box);
   if (!pixels) return { ok: false, issue: "no_face" };
-  if (pixels.brightness < THRESHOLDS.minBrightness) return { ok: false, issue: "dark", metrics: undefined };
+  if (pixels.brightness < THRESHOLDS.minBrightness) return { ok: false, issue: "dark" };
   if (pixels.brightness > THRESHOLDS.maxBrightness) return { ok: false, issue: "bright" };
   if (pixels.sharpness < THRESHOLDS.minSharpness) return { ok: false, issue: "blurry" };
 
