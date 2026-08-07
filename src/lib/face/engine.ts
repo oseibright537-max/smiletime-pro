@@ -109,6 +109,35 @@ export function computeGeometry(
   return { yaw, pitch, ear, scale: faceWidth / Math.max(frameWidth, 1) };
 }
 
+function toSample(result: {
+  descriptor: Float32Array;
+  detection: { score: number; box: { x: number; y: number; width: number; height: number } };
+  landmarks: {
+    getLeftEye(): Point[];
+    getRightEye(): Point[];
+    getNose(): Point[];
+    getJawOutline(): Point[];
+    getMouth(): Point[];
+    positions: Point[];
+  };
+}, frameWidth: number): FaceSample {
+  const lm = result.landmarks;
+  return {
+    descriptor: result.descriptor,
+    score: result.detection.score,
+    box: result.detection.box,
+    landmarks: lm.positions.map((p) => ({ x: p.x, y: p.y })),
+    geometry: computeGeometry(
+      lm.getLeftEye(),
+      lm.getRightEye(),
+      lm.getNose(),
+      lm.getJawOutline(),
+      lm.getMouth(),
+      frameWidth,
+    ),
+  };
+}
+
 /** Detects the single most prominent face and returns its embedding + geometry. */
 export async function analyseFrame(video: HTMLVideoElement): Promise<FaceSample | null> {
   const faceapi = await getFaceApi();
@@ -120,25 +149,42 @@ export async function analyseFrame(video: HTMLVideoElement): Promise<FaceSample 
     .withFaceDescriptor();
 
   if (!result) return null;
-
-  const lm = result.landmarks;
-  const geometry = computeGeometry(
-    lm.getLeftEye(),
-    lm.getRightEye(),
-    lm.getNose(),
-    lm.getJawOutline(),
-    lm.getMouth(),
-    video.videoWidth,
-  );
-
-  return {
-    descriptor: result.descriptor,
-    score: result.detection.score,
-    box: result.detection.box,
-    landmarks: lm.positions.map((p) => ({ x: p.x, y: p.y })),
-    geometry,
-  };
+  return toSample(result as never, video.videoWidth);
 }
+
+/**
+ * Detects every face in the frame (largest first). Enrolment needs the count so
+ * it can refuse frames where a bystander is also visible.
+ */
+export async function analyseAllFaces(video: HTMLVideoElement): Promise<FaceSample[]> {
+  const faceapi = await getFaceApi();
+  if (!video.videoWidth) return [];
+
+  const results = await faceapi
+    .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 }))
+    .withFaceLandmarks()
+    .withFaceDescriptors();
+
+  return results
+    .map((r) => toSample(r as never, video.videoWidth))
+    .sort((a, b) => b.box.width - a.box.width);
+}
+
+/** L2-normalised mean of several descriptors — a more stable template. */
+export function averageDescriptors(descriptors: Float32Array[]): Float32Array {
+  const dims = descriptors[0]?.length ?? 128;
+  const out = new Float32Array(dims);
+  for (const d of descriptors) for (let i = 0; i < dims; i++) out[i]! += d[i]!;
+  let norm = 0;
+  for (let i = 0; i < dims; i++) {
+    out[i]! /= descriptors.length;
+    norm += out[i]! * out[i]!;
+  }
+  norm = Math.sqrt(norm) || 1;
+  for (let i = 0; i < dims; i++) out[i]! /= norm;
+  return out;
+}
+
 
 /** pgvector literal, e.g. "[0.1,-0.2,...]" */
 export function toVectorLiteral(descriptor: Float32Array): string {
