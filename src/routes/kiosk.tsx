@@ -153,17 +153,34 @@ function Kiosk() {
           if (!sample) {
             setHint("Waiting for a face…");
             session.reset();
+            probeRef.current = [];
             setPhase("searching");
           } else if (sample.geometry.scale < 0.18) {
             setHint("Step a little closer");
           } else {
             setPhase("liveness");
+
+            // Keep the best clean, well-lit frames seen during the liveness
+            // sequence; the probe is their averaged vector, which is far more
+            // robust than a single frame in low light or slight motion.
+            const verdict = assessFrame(video, [sample]);
+            if (verdict.ok) {
+              probeRef.current.push({ descriptor: sample.descriptor, score: verdict.metrics.score });
+              probeRef.current.sort((a, b) => b.score - a.score);
+              if (probeRef.current.length > 5) probeRef.current.length = 5;
+            }
+
             const passed = session.push(sample.geometry);
             if (passed) {
               busyRef.current = true;
               const score = session.score();
               session.reset();
-              await recognise(sample.descriptor, score);
+              const probes = probeRef.current.map((p) => p.descriptor);
+              probeRef.current = [];
+              await recognise(
+                probes.length > 0 ? averageDescriptors(probes) : sample.descriptor,
+                score,
+              );
             } else {
               const c = session.current;
               const { done, total } = session.progress;
