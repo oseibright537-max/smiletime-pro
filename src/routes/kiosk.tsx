@@ -48,6 +48,8 @@ function Kiosk() {
     { ok: boolean; name?: string; message: string; confidence?: number; liveness?: number } | null
   >(null);
   const livenessRef = useRef<LivenessSession | null>(null);
+  /** Best recent quality-gated descriptors; matching uses their mean. */
+  const probeRef = useRef<{ descriptor: Float32Array; score: number }[]>([]);
   const busyRef = useRef(false);
   const loopRef = useRef(false);
   const kindRef = useRef<Kind>(kind);
