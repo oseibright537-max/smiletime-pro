@@ -68,6 +68,7 @@ function Kiosk() {
     setTimeout(() => {
       setResult(null);
       livenessRef.current = new LivenessSession();
+      probeRef.current = [];
       busyRef.current = false;
       setPhase("searching");
     }, 4000);
