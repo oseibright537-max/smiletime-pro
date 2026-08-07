@@ -1,29 +1,40 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCamera } from "@/hooks/useCamera";
-import { analyseFrame, getFaceApi, POSES, toVectorLiteral, type PoseKey } from "@/lib/face/engine";
+import { analyseAllFaces, getFaceApi, toVectorLiteral } from "@/lib/face/engine";
+import { ANGLES, EnrolmentSession, TOTAL_TARGET, type AngleKey } from "@/lib/face/capture";
 import { Badge, Button, Panel } from "@/components/ui/primitives";
 
 export const Route = createFileRoute("/console/enroll/$employeeId")({ component: Enroll });
-
-const HOLD_FRAMES = 6; // consecutive good frames required before capturing a pose
 
 function Enroll() {
   const { employeeId } = useParams({ from: "/console/enroll/$employeeId" });
   const navigate = useNavigate();
   const { videoRef, start, stop, active, error } = useCamera();
   const [modelsReady, setModelsReady] = useState(false);
-  const [poseIndex, setPoseIndex] = useState(0);
-  const [hint, setHint] = useState("Position your face inside the frame");
   const [saving, setSaving] = useState(false);
-  const capturedRef = useRef<Record<string, number[]>>({});
-  const [captured, setCaptured] = useState<PoseKey[]>([]);
-  const holdRef = useRef(0);
-  const runningRef = useRef(false);
+  const [hint, setHint] = useState("Position your face inside the circle");
+  const [accepted, setAccepted] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [captured, setCaptured] = useState(0);
+  const [quality, setQuality] = useState(0);
+  const [counts, setCounts] = useState<Record<AngleKey, number>>({
+    front: 0,
+    left: 0,
+    right: 0,
+    up: 0,
+    down: 0,
+  });
+  const [activeAngle, setActiveAngle] = useState<AngleKey | null>("front");
+  const [elapsed, setElapsed] = useState(0);
+
+  const sessionRef = useRef(new EnrolmentSession());
+  const loopRef = useRef(false);
+  const doneRef = useRef(false);
 
   const employee = useQuery({
     queryKey: ["employee", employeeId],
@@ -38,60 +49,62 @@ function Enroll() {
   }, []);
 
   const persist = useCallback(async () => {
+    const session = sessionRef.current;
     setSaving(true);
+    setElapsed(Math.round(session.elapsedMs / 100) / 10);
     try {
-      const rows = Object.entries(capturedRef.current).map(([pose, vec]) => ({
+      const rows = session.templates().map((t) => ({
         employee_id: employeeId,
-        pose,
-        embedding: toVectorLiteral(Float32Array.from(vec)) as unknown as string,
+        pose: t.pose,
+        quality: t.quality,
+        embedding: toVectorLiteral(t.descriptor) as unknown as string,
       }));
+      if (rows.length === 0) throw new Error("No usable frames were captured");
+
       await supabase.from("face_embeddings").delete().eq("employee_id", employeeId);
       const { error: insertError } = await supabase.from("face_embeddings").insert(rows);
       if (insertError) throw insertError;
-      toast.success("Face enrolment complete — only math vectors were stored");
+
+      toast.success("Enrolment complete — only irreversible vectors were stored");
       stop();
       navigate({ to: "/console/employees" });
     } catch (e) {
+      doneRef.current = false;
       toast.error((e as Error).message);
     } finally {
       setSaving(false);
     }
   }, [employeeId, navigate, stop]);
 
-  // Detection loop
+  // Continuous analysis loop — no manual capture, transient failures just retry.
   useEffect(() => {
     if (!active || !modelsReady) return;
-    runningRef.current = true;
+    loopRef.current = true;
     let raf = 0;
 
     const tick = async () => {
-      if (!runningRef.current) return;
+      if (!loopRef.current) return;
       const video = videoRef.current;
-      const pose = POSES[poseIndex];
-      if (video && pose) {
+      if (video && !doneRef.current) {
         try {
-          const sample = await analyseFrame(video);
-          if (!sample) {
-            holdRef.current = 0;
-            setHint("No face detected — step into the frame");
-          } else if (sample.geometry.scale < 0.18) {
-            holdRef.current = 0;
-            setHint("Move a little closer to the camera");
-          } else if (!pose.test(sample.geometry)) {
-            holdRef.current = 0;
-            setHint(pose.label);
-          } else {
-            holdRef.current += 1;
-            setHint(`Hold still… ${Math.min(HOLD_FRAMES, holdRef.current)}/${HOLD_FRAMES}`);
-            if (holdRef.current >= HOLD_FRAMES) {
-              capturedRef.current[pose.key] = Array.from(sample.descriptor);
-              holdRef.current = 0;
-              setCaptured((c) => (c.includes(pose.key) ? c : [...c, pose.key]));
-              setPoseIndex((i) => i + 1);
-            }
+          const samples = await analyseAllFaces(video);
+          const fb = sessionRef.current.push(video, samples);
+          setHint(fb.message);
+          setAccepted(fb.accepted);
+          setProgress(fb.progress);
+          setCaptured(fb.captured);
+          setActiveAngle(fb.activeAngle);
+          setCounts(sessionRef.current.counts);
+          if (fb.quality) setQuality(fb.quality);
+
+          if (sessionRef.current.complete && !doneRef.current) {
+            doneRef.current = true;
+            loopRef.current = false;
+            void persist();
+            return;
           }
         } catch {
-          /* transient frame error, keep looping */
+          /* transient frame error — the next tick retries automatically */
         }
       }
       raf = requestAnimationFrame(() => void tick());
@@ -99,16 +112,12 @@ function Enroll() {
 
     void tick();
     return () => {
-      runningRef.current = false;
+      loopRef.current = false;
       cancelAnimationFrame(raf);
     };
-  }, [active, modelsReady, poseIndex, videoRef]);
+  }, [active, modelsReady, persist, videoRef]);
 
-  const done = poseIndex >= POSES.length;
-
-  useEffect(() => {
-    if (done && !saving && Object.keys(capturedRef.current).length === POSES.length) void persist();
-  }, [done, saving, persist]);
+  const ring = 2 * Math.PI * 46;
 
   return (
     <div className="space-y-6">
@@ -120,43 +129,88 @@ function Enroll() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <Panel className="p-0 overflow-hidden">
+        <Panel className="overflow-hidden p-0">
           <div className="relative aspect-video bg-background">
             <video
               ref={videoRef}
               playsInline
               muted
+              aria-label="Live camera preview for face enrolment"
               className="h-full w-full scale-x-[-1] object-cover"
             />
+
+            {/* Face guide ring with capture progress */}
+            {active && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <svg viewBox="0 0 100 100" className="h-[78%] max-h-full" aria-hidden="true">
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="46"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    className={accepted ? "text-success/60" : "text-muted-foreground/40"}
+                  />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="46"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    className="text-primary transition-[stroke-dashoffset] duration-200"
+                    strokeDasharray={ring}
+                    strokeDashoffset={ring * (1 - progress)}
+                    transform="rotate(-90 50 50)"
+                  />
+                </svg>
+              </div>
+            )}
+
             {!active && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center">
                 <p className="max-w-sm px-6 text-sm text-muted-foreground">
                   {error ??
-                    "Camera is off. Images are processed on this device and never uploaded — only the resulting vectors are saved."}
+                    "Frames are analysed on this device and never uploaded — only the resulting math vectors are saved. Capture is fully automatic; just follow the on-screen prompts."}
                 </p>
                 <Button onClick={() => void start()} disabled={!modelsReady}>
-                  {modelsReady ? "Start camera" : "Loading models…"}
+                  {modelsReady ? "Start enrolment" : "Loading models…"}
                 </Button>
               </div>
             )}
+
             {active && (
-              <div className="pointer-events-none absolute inset-0 flex items-end justify-center p-6">
-                <div className="glow-ring rounded-full bg-background/80 px-4 py-2 text-sm">{hint}</div>
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 p-6">
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className={`rounded-full px-5 py-2 text-sm font-medium backdrop-blur ${
+                    accepted ? "bg-success/20 text-success" : "bg-background/85"
+                  }`}
+                >
+                  {hint}
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {captured}/{TOTAL_TARGET} frames · quality {Math.round(quality * 100)}%
+                </span>
               </div>
             )}
           </div>
         </Panel>
 
         <Panel>
-          <h2 className="font-semibold">Capture sequence</h2>
+          <h2 className="font-semibold">Capture coverage</h2>
           <ol className="mt-4 space-y-3">
-            {POSES.map((p, i) => {
-              const complete = captured.includes(p.key);
-              const current = i === poseIndex && active;
+            {ANGLES.map((a) => {
+              const n = counts[a.key];
+              const complete = n >= a.target;
+              const current = a.key === activeAngle;
               return (
-                <li key={p.key} className="flex items-center gap-3 text-sm">
+                <li key={a.key} className="flex items-center gap-3 text-sm">
                   <span
-                    className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${
+                    className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] ${
                       complete
                         ? "bg-success/20 text-success"
                         : current
@@ -164,23 +218,34 @@ function Enroll() {
                           : "bg-secondary text-muted-foreground"
                     }`}
                   >
-                    {complete ? <Check className="h-3.5 w-3.5" /> : i + 1}
+                    {complete ? <Check className="h-3.5 w-3.5" /> : n}
                   </span>
-                  <span className={complete ? "text-muted-foreground line-through" : ""}>{p.label}</span>
+                  <span className={complete ? "text-muted-foreground line-through" : ""}>{a.label}</span>
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {Math.min(n, a.target)}/{a.target}
+                  </span>
                 </li>
               );
             })}
           </ol>
+
           <div className="mt-6 space-y-2 text-xs text-muted-foreground">
-            <Badge tone="primary">128-D embedding per angle</Badge>
+            <Badge tone="primary">automatic capture</Badge>
             <p>
-              Each angle yields an irreversible 128-dimension vector. Photos are discarded the moment the vector
-              is computed.
+              Blurry, dark, overexposed, off-centre, or multi-face frames are rejected automatically and
+              retried — no buttons, no restarts. The stored template is the averaged vector of the best
+              frames per angle.
             </p>
+            {elapsed > 0 && (
+              <p className="flex items-center gap-1.5 text-success">
+                <ShieldCheck className="h-3.5 w-3.5" /> captured in {elapsed}s
+              </p>
+            )}
           </div>
+
           {saving && (
             <p className="mt-4 flex items-center gap-2 text-sm text-primary">
-              <Loader2 className="h-4 w-4 animate-spin" /> Saving templates…
+              <Loader2 className="h-4 w-4 animate-spin" /> Building templates…
             </p>
           )}
         </Panel>
