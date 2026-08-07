@@ -83,8 +83,8 @@ function Landing() {
         </h1>
         <p className="mt-5 max-w-2xl text-base text-muted-foreground md:text-lg">
           Sentra replaces fingerprints, RFID cards, and paper sign-ins with liveness-checked facial
-          recognition. Employees enrol once from five angles; every subsequent check-in takes under two
-          seconds.
+          recognition. Employees enrol once from five angles; every subsequent check-in takes under
+          two seconds.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link to="/auth" search={{ next: "/console" }}>

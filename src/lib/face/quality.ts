@@ -128,10 +128,7 @@ export function measurePixels(
 }
 
 /** Applies every gate and returns the first blocking issue, or the metrics. */
-export function assessFrame(
-  video: HTMLVideoElement,
-  samples: FaceSample[],
-): QualityVerdict {
+export function assessFrame(video: HTMLVideoElement, samples: FaceSample[]): QualityVerdict {
   if (samples.length === 0) return { ok: false, issue: "no_face" };
   if (samples.length > 1) return { ok: false, issue: "multiple_faces" };
 

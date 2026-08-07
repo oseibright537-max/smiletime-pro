@@ -39,7 +39,13 @@ function Enroll() {
   const employee = useQuery({
     queryKey: ["employee", employeeId],
     queryFn: async () =>
-      (await supabase.from("employees").select("id,full_name,employee_code").eq("id", employeeId).single()).data,
+      (
+        await supabase
+          .from("employees")
+          .select("id,full_name,employee_code")
+          .eq("id", employeeId)
+          .single()
+      ).data,
   });
 
   useEffect(() => {
@@ -124,7 +130,9 @@ function Enroll() {
       <div>
         <h1 className="text-2xl font-semibold">Face enrolment</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {employee.data ? `${employee.data.full_name} · ${employee.data.employee_code}` : "Loading employee…"}
+          {employee.data
+            ? `${employee.data.full_name} · ${employee.data.employee_code}`
+            : "Loading employee…"}
         </p>
       </div>
 
@@ -220,7 +228,9 @@ function Enroll() {
                   >
                     {complete ? <Check className="h-3.5 w-3.5" /> : n}
                   </span>
-                  <span className={complete ? "text-muted-foreground line-through" : ""}>{a.label}</span>
+                  <span className={complete ? "text-muted-foreground line-through" : ""}>
+                    {a.label}
+                  </span>
                   <span className="ml-auto text-xs text-muted-foreground">
                     {Math.min(n, a.target)}/{a.target}
                   </span>
@@ -232,9 +242,9 @@ function Enroll() {
           <div className="mt-6 space-y-2 text-xs text-muted-foreground">
             <Badge tone="primary">automatic capture</Badge>
             <p>
-              Blurry, dark, overexposed, off-centre, or multi-face frames are rejected automatically and
-              retried — no buttons, no restarts. The stored template is the averaged vector of the best
-              frames per angle.
+              Blurry, dark, overexposed, off-centre, or multi-face frames are rejected automatically
+              and retried — no buttons, no restarts. The stored template is the averaged vector of
+              the best frames per angle.
             </p>
             {elapsed > 0 && (
               <p className="flex items-center gap-1.5 text-success">

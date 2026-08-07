@@ -30,10 +30,34 @@ export const ANGLES: AngleSpec[] = [
     test: (g) => Math.abs(g.yaw) < 0.2 && Math.abs(g.pitch) < 0.32,
     target: 8,
   },
-  { key: "left", label: "Turned left", prompt: "Slowly turn left", test: (g) => g.yaw > 0.28, target: 6 },
-  { key: "right", label: "Turned right", prompt: "Slowly turn right", test: (g) => g.yaw < -0.28, target: 6 },
-  { key: "up", label: "Chin up", prompt: "Tilt your chin up", test: (g) => g.pitch > 0.33, target: 5 },
-  { key: "down", label: "Chin down", prompt: "Tilt your chin down", test: (g) => g.pitch < -0.33, target: 5 },
+  {
+    key: "left",
+    label: "Turned left",
+    prompt: "Slowly turn left",
+    test: (g) => g.yaw > 0.28,
+    target: 6,
+  },
+  {
+    key: "right",
+    label: "Turned right",
+    prompt: "Slowly turn right",
+    test: (g) => g.yaw < -0.28,
+    target: 6,
+  },
+  {
+    key: "up",
+    label: "Chin up",
+    prompt: "Tilt your chin up",
+    test: (g) => g.pitch > 0.33,
+    target: 5,
+  },
+  {
+    key: "down",
+    label: "Chin down",
+    prompt: "Tilt your chin down",
+    test: (g) => g.pitch < -0.33,
+    target: 5,
+  },
 ];
 
 /** 30 frames total across five angles — inside the 20-40 frame envelope. */
@@ -75,10 +99,9 @@ export class EnrolmentSession {
   }
 
   get counts(): Record<AngleKey, number> {
-    return Object.fromEntries(ANGLES.map((a) => [a.key, this.buckets.get(a.key)!.length])) as Record<
-      AngleKey,
-      number
-    >;
+    return Object.fromEntries(
+      ANGLES.map((a) => [a.key, this.buckets.get(a.key)!.length]),
+    ) as Record<AngleKey, number>;
   }
 
   get captured() {
@@ -121,14 +144,18 @@ export class EnrolmentSession {
     // preferring the active one so instructions stay truthful.
     const spec =
       (active.test(sample.geometry) ? active : null) ??
-      ANGLES.find((a) => this.buckets.get(a.key)!.length < MAX_PER_BUCKET && a.test(sample.geometry));
+      ANGLES.find(
+        (a) => this.buckets.get(a.key)!.length < MAX_PER_BUCKET && a.test(sample.geometry),
+      );
 
     if (!spec) {
       return { ...base, message: active.prompt, issue: null, accepted: false };
     }
 
     const bucket = this.buckets.get(spec.key)!;
-    const tooSimilar = bucket.some((k) => euclidean(k.descriptor, sample.descriptor) < MIN_DESCRIPTOR_DELTA);
+    const tooSimilar = bucket.some(
+      (k) => euclidean(k.descriptor, sample.descriptor) < MIN_DESCRIPTOR_DELTA,
+    );
     if (tooSimilar) {
       return { ...base, message: `${spec.prompt} — move slightly`, issue: null, accepted: false };
     }

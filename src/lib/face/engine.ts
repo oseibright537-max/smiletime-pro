@@ -61,7 +61,6 @@ export async function getFaceApi(): Promise<FaceApi> {
       ]);
       return faceapi;
     })();
-
   }
   return apiPromise;
 }
@@ -109,18 +108,21 @@ export function computeGeometry(
   return { yaw, pitch, ear, scale: faceWidth / Math.max(frameWidth, 1) };
 }
 
-function toSample(result: {
-  descriptor: Float32Array;
-  detection: { score: number; box: { x: number; y: number; width: number; height: number } };
-  landmarks: {
-    getLeftEye(): Point[];
-    getRightEye(): Point[];
-    getNose(): Point[];
-    getJawOutline(): Point[];
-    getMouth(): Point[];
-    positions: Point[];
-  };
-}, frameWidth: number): FaceSample {
+function toSample(
+  result: {
+    descriptor: Float32Array;
+    detection: { score: number; box: { x: number; y: number; width: number; height: number } };
+    landmarks: {
+      getLeftEye(): Point[];
+      getRightEye(): Point[];
+      getNose(): Point[];
+      getJawOutline(): Point[];
+      getMouth(): Point[];
+      positions: Point[];
+    };
+  },
+  frameWidth: number,
+): FaceSample {
   const lm = result.landmarks;
   return {
     descriptor: result.descriptor,
@@ -144,7 +146,10 @@ export async function analyseFrame(video: HTMLVideoElement): Promise<FaceSample 
   if (!video.videoWidth) return null;
 
   const result = await faceapi
-    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 }))
+    .detectSingleFace(
+      video,
+      new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 }),
+    )
     .withFaceLandmarks()
     .withFaceDescriptor();
 
@@ -161,7 +166,10 @@ export async function analyseAllFaces(video: HTMLVideoElement): Promise<FaceSamp
   if (!video.videoWidth) return [];
 
   const results = await faceapi
-    .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 }))
+    .detectAllFaces(
+      video,
+      new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 }),
+    )
     .withFaceLandmarks()
     .withFaceDescriptors();
 
@@ -185,7 +193,6 @@ export function averageDescriptors(descriptors: Float32Array[]): Float32Array {
   return out;
 }
 
-
 /** pgvector literal, e.g. "[0.1,-0.2,...]" */
 export function toVectorLiteral(descriptor: Float32Array): string {
   return `[${Array.from(descriptor)
@@ -194,9 +201,21 @@ export function toVectorLiteral(descriptor: Float32Array): string {
 }
 
 export const POSES = [
-  { key: "front", label: "Look straight ahead", test: (g: FaceGeometry) => Math.abs(g.yaw) < 0.18 && Math.abs(g.pitch) < 0.3 },
-  { key: "left", label: "Turn your head slowly to your left", test: (g: FaceGeometry) => g.yaw > 0.3 },
-  { key: "right", label: "Turn your head slowly to your right", test: (g: FaceGeometry) => g.yaw < -0.3 },
+  {
+    key: "front",
+    label: "Look straight ahead",
+    test: (g: FaceGeometry) => Math.abs(g.yaw) < 0.18 && Math.abs(g.pitch) < 0.3,
+  },
+  {
+    key: "left",
+    label: "Turn your head slowly to your left",
+    test: (g: FaceGeometry) => g.yaw > 0.3,
+  },
+  {
+    key: "right",
+    label: "Turn your head slowly to your right",
+    test: (g: FaceGeometry) => g.yaw < -0.3,
+  },
   { key: "up", label: "Tilt your chin up", test: (g: FaceGeometry) => g.pitch > 0.35 },
   { key: "down", label: "Tilt your chin down", test: (g: FaceGeometry) => g.pitch < -0.35 },
 ] as const;
