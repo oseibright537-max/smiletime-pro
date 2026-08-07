@@ -67,7 +67,7 @@ function Landing() {
           </div>
           <span className="font-display text-lg font-semibold">Sentra</span>
         </div>
-        <Link to="/auth">
+        <Link to="/auth" search={{ next: "/console" }}>
           <Button variant="outline" size="sm">
             Sign in
           </Button>
@@ -87,7 +87,7 @@ function Landing() {
           seconds.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <Link to="/auth">
+          <Link to="/auth" search={{ next: "/console" }}>
             <Button size="lg">Open the console</Button>
           </Link>
           <Link to="/kiosk">
