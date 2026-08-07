@@ -5,9 +5,11 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCamera } from "@/hooks/useCamera";
-import { analyseFrame, getFaceApi, toVectorLiteral } from "@/lib/face/engine";
+import { analyseFrame, averageDescriptors, getFaceApi, toVectorLiteral } from "@/lib/face/engine";
+import { assessFrame } from "@/lib/face/quality";
 import { CHALLENGE_COPY, LivenessSession } from "@/lib/face/liveness";
 import { Badge, Button, Panel, Select } from "@/components/ui/primitives";
+
 
 export const Route = createFileRoute("/kiosk")({
   head: () => ({
