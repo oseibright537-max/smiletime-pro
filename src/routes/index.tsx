@@ -67,7 +67,7 @@ function Landing() {
           </div>
           <span className="font-display text-lg font-semibold">Sentra</span>
         </div>
-        <Link to="/auth">
+        <Link to="/auth" search={{ next: "/console" }}>
           <Button variant="outline" size="sm">
             Sign in
           </Button>
@@ -83,11 +83,11 @@ function Landing() {
         </h1>
         <p className="mt-5 max-w-2xl text-base text-muted-foreground md:text-lg">
           Sentra replaces fingerprints, RFID cards, and paper sign-ins with liveness-checked facial
-          recognition. Employees enrol once from five angles; every subsequent check-in takes under two
-          seconds.
+          recognition. Employees enrol once from five angles; every subsequent check-in takes under
+          two seconds.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <Link to="/auth">
+          <Link to="/auth" search={{ next: "/console" }}>
             <Button size="lg">Open the console</Button>
           </Link>
           <Link to="/kiosk">
