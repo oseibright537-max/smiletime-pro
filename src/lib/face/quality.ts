@@ -52,16 +52,37 @@ export type QualityVerdict =
   | { ok: false; issue: QualityIssue; metrics?: QualityMetrics };
 
 export const THRESHOLDS = {
-  minScale: 0.2,
-  maxScale: 0.72,
-  maxCenterOffset: 0.28,
-  minBrightness: 0.22,
-  maxBrightness: 0.88,
-  minSharpness: 0.16,
-  minFaceWidthPx: 110,
-  minEar: 0.19,
-  minDetection: 0.6,
+  minScale: 0.14,
+  maxScale: 0.85,
+  maxCenterOffset: 0.45,
+  minBrightness: 0.12,
+  maxBrightness: 0.95,
+  minSharpness: 0.07,
+  minFaceWidthPx: 70,
+  minEar: 0.14,
+  minDetection: 0.4,
 } as const;
+
+/**
+ * `relax` (0..1) progressively loosens every gate. The enrolment session raises
+ * it when nothing has been accepted for a while, so a dim room or a soft webcam
+ * can never deadlock the flow.
+ */
+function tuned(relax: number) {
+  const r = Math.max(0, Math.min(1, relax));
+  return {
+    minScale: THRESHOLDS.minScale * (1 - 0.4 * r),
+    maxScale: THRESHOLDS.maxScale + 0.1 * r,
+    maxCenterOffset: THRESHOLDS.maxCenterOffset + 0.35 * r,
+    minBrightness: THRESHOLDS.minBrightness * (1 - 0.6 * r),
+    maxBrightness: Math.min(0.995, THRESHOLDS.maxBrightness + 0.04 * r),
+    minSharpness: THRESHOLDS.minSharpness * (1 - 0.7 * r),
+    minFaceWidthPx: THRESHOLDS.minFaceWidthPx * (1 - 0.4 * r),
+    minEar: THRESHOLDS.minEar * (1 - 0.4 * r),
+    minDetection: THRESHOLDS.minDetection * (1 - 0.3 * r),
+  };
+}
+
 
 const work = (() => {
   let canvas: HTMLCanvasElement | null = null;
@@ -128,39 +149,55 @@ export function measurePixels(
 }
 
 /** Applies every gate and returns the first blocking issue, or the metrics. */
-export function assessFrame(video: HTMLVideoElement, samples: FaceSample[]): QualityVerdict {
+export function assessFrame(
+  video: HTMLVideoElement,
+  samples: FaceSample[],
+  relax = 0,
+): QualityVerdict {
   if (samples.length === 0) return { ok: false, issue: "no_face" };
-  if (samples.length > 1) return { ok: false, issue: "multiple_faces" };
+  // Bystanders only block while the gates are strict; when relaxed we simply
+  // use the largest (closest) face rather than stalling the whole enrolment.
+  if (samples.length > 1 && relax < 0.5) return { ok: false, issue: "multiple_faces" };
 
+  const t = tuned(relax);
   const sample = samples[0]!;
   const { box, geometry } = sample;
   const vw = video.videoWidth || 1;
   const vh = video.videoHeight || 1;
 
-  if (sample.score < THRESHOLDS.minDetection) return { ok: false, issue: "low_confidence" };
-  if (geometry.scale < THRESHOLDS.minScale) return { ok: false, issue: "too_far" };
-  if (geometry.scale > THRESHOLDS.maxScale) return { ok: false, issue: "too_close" };
+  if (sample.score < t.minDetection) return { ok: false, issue: "low_confidence" };
+  if (geometry.scale < t.minScale) return { ok: false, issue: "too_far" };
+  if (geometry.scale > t.maxScale) return { ok: false, issue: "too_close" };
 
   const cx = (box.x + box.width / 2) / vw;
   const cy = (box.y + box.height / 2) / vh;
   const centerOffset = Math.hypot((cx - 0.5) * 2, (cy - 0.5) * 2);
-  if (box.x < 2 || box.y < 2 || box.x + box.width > vw - 2 || box.y + box.height > vh - 2)
+  // Tolerate a little edge overlap; only reject when a real chunk is missing.
+  const margin = -0.12 * box.width;
+  if (
+    box.x < margin ||
+    box.y < margin ||
+    box.x + box.width > vw - margin ||
+    box.y + box.height > vh - margin
+  )
     return { ok: false, issue: "cropped" };
-  if (centerOffset > THRESHOLDS.maxCenterOffset) return { ok: false, issue: "off_center" };
-  if (box.width < THRESHOLDS.minFaceWidthPx) return { ok: false, issue: "low_res" };
-  if (geometry.ear < THRESHOLDS.minEar) return { ok: false, issue: "eyes_closed" };
+  if (centerOffset > t.maxCenterOffset) return { ok: false, issue: "off_center" };
+  if (box.width < t.minFaceWidthPx) return { ok: false, issue: "low_res" };
+  if (geometry.ear < t.minEar) return { ok: false, issue: "eyes_closed" };
 
   const pixels = measurePixels(video, box);
   if (!pixels) return { ok: false, issue: "no_face" };
-  if (pixels.brightness < THRESHOLDS.minBrightness) return { ok: false, issue: "dark" };
-  if (pixels.brightness > THRESHOLDS.maxBrightness) return { ok: false, issue: "bright" };
-  if (pixels.sharpness < THRESHOLDS.minSharpness) return { ok: false, issue: "blurry" };
+  if (pixels.brightness < t.minBrightness) return { ok: false, issue: "dark" };
+  if (pixels.brightness > t.maxBrightness) return { ok: false, issue: "bright" };
+  if (pixels.sharpness < t.minSharpness) return { ok: false, issue: "blurry" };
 
   const score =
     0.35 * Math.min(1, sample.score / 0.9) +
     0.3 * Math.min(1, pixels.sharpness / 0.45) +
     0.2 * (1 - Math.abs(pixels.brightness - 0.55) / 0.45) +
-    0.15 * (1 - centerOffset / THRESHOLDS.maxCenterOffset);
+    0.15 * (1 - Math.min(1, centerOffset / t.maxCenterOffset));
+
+
 
   return {
     ok: true,

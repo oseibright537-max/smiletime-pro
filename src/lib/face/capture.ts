@@ -27,45 +27,53 @@ export const ANGLES: AngleSpec[] = [
     key: "front",
     label: "Straight ahead",
     prompt: "Look straight at the camera",
-    test: (g) => Math.abs(g.yaw) < 0.2 && Math.abs(g.pitch) < 0.32,
-    target: 8,
+    test: (g) => Math.abs(g.yaw) < 0.3 && Math.abs(g.pitch) < 0.45,
+    target: 5,
   },
   {
     key: "left",
     label: "Turned left",
-    prompt: "Slowly turn left",
-    test: (g) => g.yaw > 0.28,
-    target: 6,
+    prompt: "Slowly turn your head left",
+    test: (g) => g.yaw > 0.16,
+    target: 3,
   },
   {
     key: "right",
     label: "Turned right",
-    prompt: "Slowly turn right",
-    test: (g) => g.yaw < -0.28,
-    target: 6,
+    prompt: "Slowly turn your head right",
+    test: (g) => g.yaw < -0.16,
+    target: 3,
   },
   {
     key: "up",
     label: "Chin up",
-    prompt: "Tilt your chin up",
-    test: (g) => g.pitch > 0.33,
-    target: 5,
+    prompt: "Tilt your chin up slightly",
+    test: (g) => g.pitch > 0.2,
+    target: 2,
   },
   {
     key: "down",
     label: "Chin down",
-    prompt: "Tilt your chin down",
-    test: (g) => g.pitch < -0.33,
-    target: 5,
+    prompt: "Tilt your chin down slightly",
+    test: (g) => g.pitch < -0.2,
+    target: 2,
   },
 ];
 
-/** 30 frames total across five angles — inside the 20-40 frame envelope. */
+/** 15 frames total across five angles — fast, and still multi-pose. */
 export const TOTAL_TARGET = ANGLES.reduce((n, a) => n + a.target, 0);
 
-const MAX_PER_BUCKET = 10;
+/** Enough frames to build a usable template if the user finishes early. */
+export const MIN_USABLE_FRAMES = 5;
+/** No accepted frame for this long → loosen the gates. */
+const RELAX_AFTER_MS = 2500;
+/** An angle that refuses to complete for this long is skipped automatically. */
+const SKIP_ANGLE_AFTER_MS = 12000;
+
+const MAX_PER_BUCKET = 8;
 /** Consecutive frames must differ enough to avoid storing 8 identical shots. */
-const MIN_DESCRIPTOR_DELTA = 0.035;
+const MIN_DESCRIPTOR_DELTA = 0.02;
+
 
 type Kept = { descriptor: Float32Array; score: number };
 
@@ -81,6 +89,8 @@ export type SessionFeedback = {
   progress: number; // 0..1
   captured: number;
   quality: number; // 0..1 of the last accepted frame
+  /** true once enough frames exist to save a usable template. */
+  canFinish: boolean;
 };
 
 function euclidean(a: Float32Array, b: Float32Array) {
@@ -91,7 +101,11 @@ function euclidean(a: Float32Array, b: Float32Array) {
 
 export class EnrolmentSession {
   private buckets = new Map<AngleKey, Kept[]>();
+  private skipped = new Set<AngleKey>();
   private lastQuality = 0;
+  private lastAcceptedAt = Date.now();
+  private angleStartedAt = Date.now();
+  private currentAngle: AngleKey | null = ANGLES[0]?.key ?? null;
   readonly startedAt = Date.now();
 
   constructor() {
@@ -108,13 +122,62 @@ export class EnrolmentSession {
     return ANGLES.reduce((n, a) => n + Math.min(this.buckets.get(a.key)!.length, a.target), 0);
   }
 
-  get complete() {
-    return ANGLES.every((a) => this.buckets.get(a.key)!.length >= a.target);
+  get totalFrames() {
+    return ANGLES.reduce((n, a) => n + this.buckets.get(a.key)!.length, 0);
   }
 
-  /** The next incomplete bucket, in order. */
+  /** Enough material to build a template — enables the manual "Finish" action. */
+  get canFinish() {
+    return this.totalFrames >= MIN_USABLE_FRAMES;
+  }
+
+  get complete() {
+    return ANGLES.every(
+      (a) => this.skipped.has(a.key) || this.buckets.get(a.key)!.length >= a.target,
+    );
+  }
+
+  /** How far the gates are currently loosened (0..1). */
+  get relax() {
+    return Math.min(1, Math.max(0, (Date.now() - this.lastAcceptedAt - RELAX_AFTER_MS) / 6000));
+  }
+
+  /** The next incomplete, non-skipped bucket, in order. */
   get activeAngle(): AngleSpec | null {
-    return ANGLES.find((a) => this.buckets.get(a.key)!.length < a.target) ?? null;
+    return (
+      ANGLES.find(
+        (a) => !this.skipped.has(a.key) && this.buckets.get(a.key)!.length < a.target,
+      ) ?? null
+    );
+  }
+
+  /** Manually skip the current angle (operator escape hatch in the UI). */
+  skipActive() {
+    const active = this.activeAngle;
+    if (active) {
+      this.skipped.add(active.key);
+      this.angleStartedAt = Date.now();
+    }
+  }
+
+  /** Skips angles the camera/user simply cannot satisfy so we never deadlock. */
+  private maintain() {
+
+    const active = this.activeAngle;
+    if (!active) return;
+    if (active.key !== this.currentAngle) {
+      this.currentAngle = active.key;
+      this.angleStartedAt = Date.now();
+      return;
+    }
+    if (
+      Date.now() - this.angleStartedAt > SKIP_ANGLE_AFTER_MS &&
+      active.key !== "front" &&
+      this.canFinish
+    ) {
+      this.skipped.add(active.key);
+      this.angleStartedAt = Date.now();
+    }
   }
 
   /**
@@ -122,15 +185,17 @@ export class EnrolmentSession {
    * feedback and the loop keeps running, which is the "automatic retry".
    */
   push(video: HTMLVideoElement, samples: FaceSample[]): SessionFeedback {
+    this.maintain();
     const active = this.activeAngle;
     const base = {
       activeAngle: active?.key ?? null,
       progress: this.captured / TOTAL_TARGET,
       captured: this.captured,
       quality: this.lastQuality,
+      canFinish: this.canFinish,
     };
 
-    const verdict = assessFrame(video, samples);
+    const verdict = assessFrame(video, samples, this.relax);
     if (!verdict.ok) {
       return { ...base, message: ISSUE_COPY[verdict.issue], issue: verdict.issue, accepted: false };
     }
@@ -164,6 +229,7 @@ export class EnrolmentSession {
     bucket.sort((a, b) => b.score - a.score);
     if (bucket.length > MAX_PER_BUCKET) bucket.length = MAX_PER_BUCKET;
     this.lastQuality = verdict.metrics.score;
+    this.lastAcceptedAt = Date.now();
 
     const next = this.activeAngle;
     return {
@@ -173,8 +239,10 @@ export class EnrolmentSession {
       quality: verdict.metrics.score,
       accepted: true,
       issue: null,
+      canFinish: this.canFinish,
       message: next ? next.prompt : "Enrolment complete",
     };
+
   }
 
   /** One averaged, L2-normalised template per angle, plus a global mean. */
