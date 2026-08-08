@@ -52,16 +52,37 @@ export type QualityVerdict =
   | { ok: false; issue: QualityIssue; metrics?: QualityMetrics };
 
 export const THRESHOLDS = {
-  minScale: 0.2,
-  maxScale: 0.72,
-  maxCenterOffset: 0.28,
-  minBrightness: 0.22,
-  maxBrightness: 0.88,
-  minSharpness: 0.16,
-  minFaceWidthPx: 110,
-  minEar: 0.19,
-  minDetection: 0.6,
+  minScale: 0.14,
+  maxScale: 0.85,
+  maxCenterOffset: 0.45,
+  minBrightness: 0.12,
+  maxBrightness: 0.95,
+  minSharpness: 0.07,
+  minFaceWidthPx: 70,
+  minEar: 0.14,
+  minDetection: 0.4,
 } as const;
+
+/**
+ * `relax` (0..1) progressively loosens every gate. The enrolment session raises
+ * it when nothing has been accepted for a while, so a dim room or a soft webcam
+ * can never deadlock the flow.
+ */
+function tuned(relax: number) {
+  const r = Math.max(0, Math.min(1, relax));
+  return {
+    minScale: THRESHOLDS.minScale * (1 - 0.4 * r),
+    maxScale: THRESHOLDS.maxScale + 0.1 * r,
+    maxCenterOffset: THRESHOLDS.maxCenterOffset + 0.35 * r,
+    minBrightness: THRESHOLDS.minBrightness * (1 - 0.6 * r),
+    maxBrightness: Math.min(0.995, THRESHOLDS.maxBrightness + 0.04 * r),
+    minSharpness: THRESHOLDS.minSharpness * (1 - 0.7 * r),
+    minFaceWidthPx: THRESHOLDS.minFaceWidthPx * (1 - 0.4 * r),
+    minEar: THRESHOLDS.minEar * (1 - 0.4 * r),
+    minDetection: THRESHOLDS.minDetection * (1 - 0.3 * r),
+  };
+}
+
 
 const work = (() => {
   let canvas: HTMLCanvasElement | null = null;
