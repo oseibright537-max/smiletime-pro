@@ -89,6 +89,8 @@ export type SessionFeedback = {
   progress: number; // 0..1
   captured: number;
   quality: number; // 0..1 of the last accepted frame
+  /** true once enough frames exist to save a usable template. */
+  canFinish: boolean;
 };
 
 function euclidean(a: Float32Array, b: Float32Array) {
@@ -99,7 +101,11 @@ function euclidean(a: Float32Array, b: Float32Array) {
 
 export class EnrolmentSession {
   private buckets = new Map<AngleKey, Kept[]>();
+  private skipped = new Set<AngleKey>();
   private lastQuality = 0;
+  private lastAcceptedAt = Date.now();
+  private angleStartedAt = Date.now();
+  private currentAngle: AngleKey | null = ANGLES[0]?.key ?? null;
   readonly startedAt = Date.now();
 
   constructor() {
@@ -116,13 +122,52 @@ export class EnrolmentSession {
     return ANGLES.reduce((n, a) => n + Math.min(this.buckets.get(a.key)!.length, a.target), 0);
   }
 
-  get complete() {
-    return ANGLES.every((a) => this.buckets.get(a.key)!.length >= a.target);
+  get totalFrames() {
+    return ANGLES.reduce((n, a) => n + this.buckets.get(a.key)!.length, 0);
   }
 
-  /** The next incomplete bucket, in order. */
+  /** Enough material to build a template — enables the manual "Finish" action. */
+  get canFinish() {
+    return this.totalFrames >= MIN_USABLE_FRAMES;
+  }
+
+  get complete() {
+    return ANGLES.every(
+      (a) => this.skipped.has(a.key) || this.buckets.get(a.key)!.length >= a.target,
+    );
+  }
+
+  /** How far the gates are currently loosened (0..1). */
+  get relax() {
+    return Math.min(1, Math.max(0, (Date.now() - this.lastAcceptedAt - RELAX_AFTER_MS) / 6000));
+  }
+
+  /** The next incomplete, non-skipped bucket, in order. */
   get activeAngle(): AngleSpec | null {
-    return ANGLES.find((a) => this.buckets.get(a.key)!.length < a.target) ?? null;
+    return (
+      ANGLES.find(
+        (a) => !this.skipped.has(a.key) && this.buckets.get(a.key)!.length < a.target,
+      ) ?? null
+    );
+  }
+
+  /** Skips angles the camera/user simply cannot satisfy so we never deadlock. */
+  private maintain() {
+    const active = this.activeAngle;
+    if (!active) return;
+    if (active.key !== this.currentAngle) {
+      this.currentAngle = active.key;
+      this.angleStartedAt = Date.now();
+      return;
+    }
+    if (
+      Date.now() - this.angleStartedAt > SKIP_ANGLE_AFTER_MS &&
+      active.key !== "front" &&
+      this.canFinish
+    ) {
+      this.skipped.add(active.key);
+      this.angleStartedAt = Date.now();
+    }
   }
 
   /**
@@ -130,13 +175,17 @@ export class EnrolmentSession {
    * feedback and the loop keeps running, which is the "automatic retry".
    */
   push(video: HTMLVideoElement, samples: FaceSample[]): SessionFeedback {
+    this.maintain();
     const active = this.activeAngle;
     const base = {
       activeAngle: active?.key ?? null,
       progress: this.captured / TOTAL_TARGET,
       captured: this.captured,
       quality: this.lastQuality,
+      canFinish: this.canFinish,
     };
+
+
 
     const verdict = assessFrame(video, samples);
     if (!verdict.ok) {
