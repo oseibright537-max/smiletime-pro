@@ -286,7 +286,6 @@ function Enroll() {
           </Panel>
         </div>
       </div>
-    </div>
   );
 }
 
