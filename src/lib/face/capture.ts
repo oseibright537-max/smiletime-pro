@@ -151,8 +151,18 @@ export class EnrolmentSession {
     );
   }
 
+  /** Manually skip the current angle (operator escape hatch in the UI). */
+  skipActive() {
+    const active = this.activeAngle;
+    if (active) {
+      this.skipped.add(active.key);
+      this.angleStartedAt = Date.now();
+    }
+  }
+
   /** Skips angles the camera/user simply cannot satisfy so we never deadlock. */
   private maintain() {
+
     const active = this.activeAngle;
     if (!active) return;
     if (active.key !== this.currentAngle) {
