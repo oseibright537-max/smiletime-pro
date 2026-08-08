@@ -1,6 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, ScanFace, ShieldAlert, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  ScanFace,
+  ShieldAlert,
+  ShieldCheck,
+  Zap,
+  Clock,
+  CheckCircle2,
+  Lock,
+  Sparkles,
+  Camera,
+  Activity,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,7 +20,7 @@ import { useCamera } from "@/hooks/useCamera";
 import { analyseFrame, averageDescriptors, getFaceApi, toVectorLiteral } from "@/lib/face/engine";
 import { assessFrame } from "@/lib/face/quality";
 import { CHALLENGE_COPY, LivenessSession } from "@/lib/face/liveness";
-import { Badge, Button, Panel, Select } from "@/components/ui/primitives";
+import { Badge, Button, Panel, Avatar } from "@/components/ui/primitives";
 
 export const Route = createFileRoute("/kiosk")({
   head: () => ({
@@ -29,12 +41,19 @@ export const Route = createFileRoute("/kiosk")({
 
 type Kind = "check_in" | "check_out" | "break_start" | "break_end";
 
-/** Cosine-distance threshold. Lower = stricter. 0.12 ≈ 0.49 euclidean on unit vectors. */
+/** Cosine-distance threshold. Lower = stricter. */
 const MATCH_THRESHOLD = 0.12;
 /** Same employee cannot log the same event kind twice within this window. */
 const DUPLICATE_WINDOW_MS = 60_000;
 
 type Phase = "idle" | "searching" | "liveness" | "matching" | "result";
+
+const KIND_LABELS: Record<Kind, { label: string; tone: "success" | "primary" | "warning" }> = {
+  check_in: { label: "Check In", tone: "success" },
+  check_out: { label: "Check Out", tone: "primary" },
+  break_start: { label: "Break Start", tone: "warning" },
+  break_end: { label: "Break End", tone: "warning" },
+};
 
 function Kiosk() {
   const { user, loading } = useAuth();
@@ -42,7 +61,8 @@ function Kiosk() {
   const [modelsReady, setModelsReady] = useState(false);
   const [kind, setKind] = useState<Kind>("check_in");
   const [phase, setPhase] = useState<Phase>("idle");
-  const [hint, setHint] = useState("Stand in front of the camera to begin");
+  const [hint, setHint] = useState("Position your face inside the viewfinder to begin");
+  const [time, setTime] = useState("");
   const [result, setResult] = useState<{
     ok: boolean;
     name?: string;
@@ -50,13 +70,26 @@ function Kiosk() {
     confidence?: number;
     liveness?: number;
   } | null>(null);
+
   const livenessRef = useRef<LivenessSession | null>(null);
-  /** Best recent quality-gated descriptors; matching uses their mean. */
   const probeRef = useRef<{ descriptor: Float32Array; score: number }[]>([]);
   const busyRef = useRef(false);
   const loopRef = useRef(false);
   const kindRef = useRef<Kind>(kind);
   kindRef.current = kind;
+
+  // Live Digital Clock
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setTime(
+        now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+      );
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     getFaceApi()
@@ -74,7 +107,7 @@ function Kiosk() {
       probeRef.current = [];
       busyRef.current = false;
       setPhase("searching");
-    }, 4000);
+    }, 4500);
   }, []);
 
   const recognise = useCallback(
@@ -91,7 +124,10 @@ function Kiosk() {
       }
       const match = data?.[0];
       if (!match) {
-        finish({ ok: false, message: "No enrolled match found. Ask HR to enrol your face." });
+        finish({
+          ok: false,
+          message: "No enrolled match found. Ask your HR administrator to enrol your face.",
+        });
         return;
       }
 
@@ -108,7 +144,7 @@ function Kiosk() {
         finish({
           ok: false,
           name: match.full_name,
-          message: `${match.full_name} already logged a ${kindRef.current.replace("_", " ")} moments ago.`,
+          message: `${match.full_name} already logged a ${kindRef.current.replace("_", " ")} within the last minute.`,
         });
         return;
       }
@@ -119,7 +155,7 @@ function Kiosk() {
         kind: kindRef.current,
         confidence,
         liveness_score: livenessScore,
-        device_label: "Web kiosk",
+        device_label: "Sentra Kiosk Station",
       });
 
       if (insertError) {
@@ -130,7 +166,7 @@ function Kiosk() {
       finish({
         ok: true,
         name: match.full_name,
-        message: `${kindRef.current.replace("_", " ")} recorded`,
+        message: `${kindRef.current.replace("_", " ")} successfully recorded.`,
         confidence,
         liveness: livenessScore,
       });
@@ -154,18 +190,15 @@ function Kiosk() {
           const sample = await analyseFrame(video);
           const session = livenessRef.current!;
           if (!sample) {
-            setHint("Waiting for a face…");
+            setHint("Looking for face landmarks…");
             session.reset();
             probeRef.current = [];
             setPhase("searching");
           } else if (sample.geometry.scale < 0.18) {
-            setHint("Step a little closer");
+            setHint("Step slightly closer to the terminal");
           } else {
             setPhase("liveness");
 
-            // Keep the best clean, well-lit frames seen during the liveness
-            // sequence; the probe is their averaged vector, which is far more
-            // robust than a single frame in low light or slight motion.
             const verdict = assessFrame(video, [sample]);
             if (verdict.ok) {
               probeRef.current.push({
@@ -190,11 +223,13 @@ function Kiosk() {
             } else {
               const c = session.current;
               const { done, total } = session.progress;
-              setHint(`${c ? CHALLENGE_COPY[c] : ""} · ${done}/${total}`);
+              setHint(
+                `${c ? CHALLENGE_COPY[c] : "Follow anti-spoof motion"} · Challenge ${done}/${total}`,
+              );
             }
           }
         } catch {
-          /* keep looping on transient frame errors */
+          /* keep looping */
         }
       }
       raf = requestAnimationFrame(() => void tick());
@@ -210,39 +245,71 @@ function Kiosk() {
   if (!loading && !user) {
     return (
       <main className="hero-surface flex min-h-screen items-center justify-center px-4">
-        <Panel className="max-w-md text-center">
-          <ShieldAlert className="mx-auto h-8 w-8 text-warning" />
-          <h1 className="mt-4 text-xl font-semibold">Kiosk needs to be provisioned</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Sign in with a workspace account on this terminal once; the device then stays authorised
-            for attendance capture.
+        <Panel className="max-w-md text-center p-8 border border-white/10 shadow-2xl">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 mb-4">
+            <ShieldAlert className="h-7 w-7" />
+          </div>
+          <h1 className="text-2xl font-extrabold text-white font-display">
+            Terminal Unprovisioned
+          </h1>
+          <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+            Sign in with a workspace administrator account on this station once to authorize facial
+            attendance capture.
           </p>
-          <Link to="/auth" search={{ next: "/kiosk" }} className="mt-5 inline-block">
-            <Button>Sign in to this device</Button>
-          </Link>
+          <div className="mt-6">
+            <Link to="/auth" search={{ next: "/kiosk" }}>
+              <Button size="lg" className="w-full">
+                Authorize Terminal Device
+              </Button>
+            </Link>
+          </div>
         </Panel>
       </main>
     );
   }
 
   return (
-    <main className="hero-surface min-h-screen">
-      <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-        <Link
-          to="/console"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" /> Console
-        </Link>
-        <div className="flex items-center gap-2">
-          <ScanFace className="h-4 w-4 text-primary" />
-          <span className="font-display font-semibold">Attendance kiosk</span>
+    <main className="hero-surface min-h-screen flex flex-col justify-between selection:bg-sky-500/30 selection:text-sky-200">
+      {/* Top Kiosk Header Bar */}
+      <header className="sticky top-0 z-40 glass-bar border-b border-white/10 px-6 py-3.5">
+        <div className="mx-auto flex max-w-6xl items-center justify-between">
+          <Link
+            to="/console"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-white transition-colors bg-white/5 px-3 py-1.5 rounded-lg border border-white/10"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to Console
+          </Link>
+
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-cyan-500">
+              <ScanFace className="h-4.5 w-4.5 text-slate-950" />
+            </div>
+            <div>
+              <span className="font-display font-bold text-white text-base tracking-tight block">
+                Sentra Attendance Kiosk
+              </span>
+              <span className="text-[10px] text-muted-foreground font-mono uppercase block">
+                Terminal ID: STN-884
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 font-mono text-xs">
+            <div className="bg-slate-900 border border-white/10 px-3 py-1.5 rounded-lg text-sky-300 font-bold">
+              {time || "00:00:00"}
+            </div>
+            <Badge tone="success" pulse size="sm">
+              LIVE
+            </Badge>
+          </div>
         </div>
       </header>
 
-      <section className="mx-auto max-w-5xl px-6 pb-16">
-        <Panel className="p-0 overflow-hidden">
-          <div className="relative aspect-video bg-background">
+      {/* Main Center Terminal Station */}
+      <section className="mx-auto max-w-4xl w-full px-6 py-8 flex-1 flex flex-col justify-center">
+        <Panel className="p-0 overflow-hidden border border-white/15 relative bg-slate-950 shadow-2xl">
+          {/* Camera Viewfinder */}
+          <div className="relative aspect-video bg-slate-950 flex items-center justify-center">
             <video
               ref={videoRef}
               playsInline
@@ -250,51 +317,97 @@ function Kiosk() {
               className="h-full w-full scale-x-[-1] object-cover"
             />
 
+            {/* Corner Brackets */}
+            <div className="absolute inset-8 pointer-events-none z-10 flex flex-col justify-between">
+              <div className="flex justify-between">
+                <div className="w-8 h-8 border-t-2 border-l-2 border-sky-400/80" />
+                <div className="w-8 h-8 border-t-2 border-r-2 border-sky-400/80" />
+              </div>
+              <div className="flex justify-between">
+                <div className="w-8 h-8 border-b-2 border-l-2 border-sky-400/80" />
+                <div className="w-8 h-8 border-b-2 border-r-2 border-sky-400/80" />
+              </div>
+            </div>
+
+            {/* Laser scan line */}
+            {active && !result && (
+              <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-sky-400 to-transparent shadow-[0_0_15px_#38bdf8] animate-scanline z-20" />
+            )}
+
+            {/* Idle State Start Prompt */}
             {!active && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center">
-                <p className="max-w-md text-sm text-muted-foreground">
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-center p-8 bg-slate-950/90 backdrop-blur-md z-30">
+                <div className="h-16 w-16 rounded-3xl bg-sky-500/10 border border-sky-400/30 flex items-center justify-center text-sky-400 shadow-lg shadow-sky-500/20">
+                  <Camera className="h-8 w-8" />
+                </div>
+                <h2 className="text-2xl font-extrabold text-white font-display">
+                  Attendance Terminal Ready
+                </h2>
+                <p className="max-w-md text-xs text-muted-foreground leading-relaxed">
                   {error ??
-                    "This terminal runs recognition locally. Video never leaves the device — only the match result is stored."}
+                    "Recognition occurs entirely on-device in WebGL memory. Video is never transmitted or stored."}
                 </p>
-                <Button size="lg" onClick={() => void start()} disabled={!modelsReady}>
-                  {modelsReady ? "Start terminal" : "Loading models…"}
+                <Button
+                  size="xl"
+                  onClick={() => void start()}
+                  disabled={!modelsReady}
+                  loading={!modelsReady}
+                  icon={<ScanFace className="h-6 w-6" />}
+                >
+                  {modelsReady ? "Activate Terminal Scanner" : "Loading Recognition Neural Models…"}
                 </Button>
               </div>
             )}
 
+            {/* Active Real-Time Scanner Overlay */}
             {active && !result && (
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-between p-6">
-                <div className="glow-ring rounded-full bg-background/80 px-4 py-1.5 text-xs uppercase tracking-wide">
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-between p-6 z-20">
+                <div className="rounded-full bg-slate-950/80 border border-white/10 px-4 py-1.5 text-xs uppercase tracking-widest font-mono text-sky-300 backdrop-blur-md">
                   {phase === "matching"
-                    ? "Matching…"
+                    ? "Cosine Matching 128-D Vector…"
                     : phase === "liveness"
-                      ? "Liveness check"
-                      : "Searching"}
+                      ? "Active Liveness Check"
+                      : "Scanning for Face…"}
                 </div>
-                <div className="rounded-xl bg-background/85 px-5 py-3 text-center text-lg font-medium">
+                <div className="rounded-2xl bg-slate-950/90 border border-white/20 px-6 py-3 text-center text-base sm:text-lg font-bold text-white shadow-2xl backdrop-blur-xl">
                   {hint}
                 </div>
               </div>
             )}
 
+            {/* Recognition Result Modal Overlay */}
             {result && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/92 px-6 text-center">
-                {result.ok ? (
-                  <ShieldCheck className="h-12 w-12 text-success" />
-                ) : (
-                  <ShieldAlert className="h-12 w-12 text-warning" />
-                )}
-                <h2 className="font-display text-3xl font-semibold">
-                  {result.name ?? "Not recognised"}
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-slate-950/95 p-8 text-center backdrop-blur-2xl z-30 animate-in fade-in zoom-in-95 duration-200">
+                <div
+                  className={`h-20 w-20 rounded-3xl flex items-center justify-center shadow-2xl ${
+                    result.ok
+                      ? "bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 shadow-emerald-500/30"
+                      : "bg-rose-500/20 border-2 border-rose-400 text-rose-400 shadow-rose-500/30"
+                  }`}
+                >
+                  {result.ok ? (
+                    <CheckCircle2 className="h-10 w-10" />
+                  ) : (
+                    <ShieldAlert className="h-10 w-10" />
+                  )}
+                </div>
+
+                <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-white">
+                  {result.name ?? (result.ok ? "Verified" : "Recognition Failed")}
                 </h2>
-                <p className="text-sm capitalize text-muted-foreground">{result.message}</p>
+
+                <p className="text-sm font-medium text-slate-300 max-w-md">{result.message}</p>
+
                 {result.ok && (
-                  <div className="mt-2 flex gap-2">
-                    <Badge tone="success">
-                      match {Math.round((result.confidence ?? 0) * 100)}%
+                  <div className="flex flex-wrap justify-center gap-3 pt-2">
+                    <Badge tone="success" size="md">
+                      MATCH: {Math.round((result.confidence ?? 0) * 100)}%
                     </Badge>
-                    <Badge tone="primary">
-                      liveness {Math.round((result.liveness ?? 0) * 100)}%
+                    <Badge tone="primary" size="md">
+                      LIVENESS: {Math.round((result.liveness ?? 0) * 100)}%
+                    </Badge>
+                    <Badge tone="muted" size="md">
+                      {KIND_LABELS[kindRef.current].label.toUpperCase()}
                     </Badge>
                   </div>
                 )}
@@ -302,31 +415,50 @@ function Kiosk() {
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 border-t border-border px-6 py-4">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">
-              Event type
-            </span>
-            <div className="w-48">
-              <Select value={kind} onChange={(e) => setKind(e.target.value as Kind)}>
-                <option value="check_in">Check in</option>
-                <option value="check_out">Check out</option>
-                <option value="break_start">Break start</option>
-                <option value="break_end">Break end</option>
-              </Select>
+          {/* Bottom Event Selector Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/10 bg-slate-900/80 px-6 py-4">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
+                MODE:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {(Object.keys(KIND_LABELS) as Kind[]).map((k) => {
+                  const isActive = kind === k;
+                  return (
+                    <button
+                      key={k}
+                      onClick={() => setKind(k)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                        isActive
+                          ? "bg-sky-400 text-slate-950 shadow-md shadow-sky-500/20"
+                          : "bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white border border-white/5"
+                      }`}
+                    >
+                      {KIND_LABELS[k].label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+
             {active && (
-              <Button variant="outline" size="sm" className="ml-auto" onClick={stop}>
-                Stop terminal
+              <Button variant="outline" size="sm" onClick={stop}>
+                Stop Terminal
               </Button>
             )}
           </div>
         </Panel>
 
-        <p className="mt-4 text-center text-xs text-muted-foreground">
-          Anti-spoofing: randomised blink and head-motion challenges plus micro-motion analysis run
-          before any identity match is accepted.
+        <p className="mt-4 text-center text-xs text-muted-foreground font-light">
+          Anti-spoofing engine: Randomised micro-motions, blink challenges, and 68-point 3D landmark
+          verification protect every event.
         </p>
       </section>
+
+      {/* Footer */}
+      <footer className="border-t border-white/10 py-4 text-center text-xs text-muted-foreground">
+        Sentra On-Device Biometric Recognition · Zero Photo Upload Policy
+      </footer>
     </main>
   );
 }
