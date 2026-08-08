@@ -185,9 +185,7 @@ export class EnrolmentSession {
       canFinish: this.canFinish,
     };
 
-
-
-    const verdict = assessFrame(video, samples);
+    const verdict = assessFrame(video, samples, this.relax);
     if (!verdict.ok) {
       return { ...base, message: ISSUE_COPY[verdict.issue], issue: verdict.issue, accepted: false };
     }
@@ -221,6 +219,7 @@ export class EnrolmentSession {
     bucket.sort((a, b) => b.score - a.score);
     if (bucket.length > MAX_PER_BUCKET) bucket.length = MAX_PER_BUCKET;
     this.lastQuality = verdict.metrics.score;
+    this.lastAcceptedAt = Date.now();
 
     const next = this.activeAngle;
     return {
@@ -230,8 +229,10 @@ export class EnrolmentSession {
       quality: verdict.metrics.score,
       accepted: true,
       issue: null,
+      canFinish: this.canFinish,
       message: next ? next.prompt : "Enrolment complete",
     };
+
   }
 
   /** One averaged, L2-normalised template per angle, plus a global mean. */
