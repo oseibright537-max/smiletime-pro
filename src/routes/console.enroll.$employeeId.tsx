@@ -31,6 +31,7 @@ function Enroll() {
   });
   const [activeAngle, setActiveAngle] = useState<AngleKey | null>("front");
   const [elapsed, setElapsed] = useState(0);
+  const [canFinish, setCanFinish] = useState(false);
 
   const sessionRef = useRef(new EnrolmentSession());
   const loopRef = useRef(false);
@@ -102,6 +103,7 @@ function Enroll() {
           setActiveAngle(fb.activeAngle);
           setCounts(sessionRef.current.counts);
           if (fb.quality) setQuality(fb.quality);
+          setCanFinish(fb.canFinish);
 
           if (sessionRef.current.complete && !doneRef.current) {
             doneRef.current = true;
@@ -216,7 +218,7 @@ function Enroll() {
                 </span>
                 <div className="flex flex-wrap items-center justify-center gap-2">
                   <Button
-                    variant="secondary"
+                    variant="outline"
                     onClick={() => sessionRef.current.skipActive()}
                     disabled={saving}
                   >
