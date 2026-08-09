@@ -77,6 +77,12 @@ function Kiosk() {
   const busyRef = useRef(false);
   const loopRef = useRef(false);
 
+  // Recomputed each second with the clock: the kiosk decides the action itself.
+  const nowLocal = new Date();
+  const minutesOfDay = nowLocal.getHours() * 60 + nowLocal.getMinutes();
+  const expectedAction = minutesOfDay >= 16 * 60 + 55 ? "CHECK OUT" : "CHECK IN";
+
+
 
   // Live Digital Clock
   useEffect(() => {
