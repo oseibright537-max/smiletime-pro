@@ -23,7 +23,9 @@ export type Database = {
           id: string
           kind: Database["public"]["Enums"]["attendance_kind"]
           liveness_score: number | null
+          local_date: string | null
           occurred_at: string
+          status: Database["public"]["Enums"]["attendance_status"]
         }
         Insert: {
           confidence?: number | null
@@ -33,7 +35,9 @@ export type Database = {
           id?: string
           kind: Database["public"]["Enums"]["attendance_kind"]
           liveness_score?: number | null
+          local_date?: string | null
           occurred_at?: string
+          status?: Database["public"]["Enums"]["attendance_status"]
         }
         Update: {
           confidence?: number | null
@@ -43,7 +47,9 @@ export type Database = {
           id?: string
           kind?: Database["public"]["Enums"]["attendance_kind"]
           liveness_score?: number | null
+          local_date?: string | null
           occurred_at?: string
+          status?: Database["public"]["Enums"]["attendance_status"]
         }
         Relationships: [
           {
@@ -210,6 +216,20 @@ export type Database = {
         Returns: boolean
       }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
+      log_attendance: {
+        Args: {
+          _confidence?: number
+          _device_label?: string
+          _employee_id: string
+          _liveness?: number
+          _tz?: string
+        }
+        Returns: {
+          kind: Database["public"]["Enums"]["attendance_kind"]
+          occurred_at: string
+          status: Database["public"]["Enums"]["attendance_status"]
+        }[]
+      }
       match_face: {
         Args: { max_distance?: number; probe: string }
         Returns: {
@@ -223,6 +243,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "hr" | "manager" | "employee"
       attendance_kind: "check_in" | "check_out" | "break_start" | "break_end"
+      attendance_status: "on_time" | "late" | "early_leave" | "normal"
       employee_status: "active" | "suspended" | "terminated"
     }
     CompositeTypes: {
@@ -353,6 +374,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "hr", "manager", "employee"],
       attendance_kind: ["check_in", "check_out", "break_start", "break_end"],
+      attendance_status: ["on_time", "late", "early_leave", "normal"],
       employee_status: ["active", "suspended", "terminated"],
     },
   },
