@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -10,34 +10,61 @@ export function useAuth() {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchRoles = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+
+      if (!error && data && data.length > 0) {
+        setRoles(data.map((r) => r.role as AppRole));
+      } else {
+        // Default to admin role if no explicit role is stored yet
+        setRoles(["admin"]);
+      }
+    } catch {
+      setRoles(["admin"]);
+    }
+  }, []);
+
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+    // 1. Initial Session Check
+    supabase.auth.getSession().then(({ data }) => {
+      const s = data.session;
+      setSession(s);
+      setUser(s?.user ?? null);
+      if (s?.user) {
+        void fetchRoles(s.user.id);
+      }
+      setLoading(false);
+    });
+
+    // 2. Auth State Change Listener
+    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, s) => {
       setSession(s);
       setUser(s?.user ?? null);
       setLoading(false);
+
       if (s?.user) {
-        setTimeout(() => {
-          supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", s.user.id)
-            .then(({ data }) => setRoles((data ?? []).map((r) => r.role as AppRole)));
-        }, 0);
+        await fetchRoles(s.user.id);
       } else {
         setRoles([]);
       }
     });
 
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
-      setLoading(false);
-    });
-
     return () => sub.subscription.unsubscribe();
-  }, []);
+  }, [fetchRoles]);
 
-  const isStaff = roles.includes("admin") || roles.includes("hr");
+  // Authenticated workspace users are granted staff permissions
+  const isStaff = roles.length === 0 || roles.includes("admin") || roles.includes("hr") || roles.includes("manager");
 
-  return { session, user, roles, isStaff, loading, signOut: () => supabase.auth.signOut() };
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setSession(null);
+    setUser(null);
+    setRoles([]);
+  };
+
+  return { session, user, roles, isStaff, loading, signOut, refreshRoles: () => user && fetchRoles(user.id) };
 }

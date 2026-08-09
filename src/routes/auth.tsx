@@ -11,6 +11,7 @@ import {
   EyeOff,
   ArrowLeft,
   User,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,34 +60,57 @@ function AuthPage() {
     e.preventDefault();
     setBusy(true);
 
+    const cleanEmail = email.trim().toLowerCase();
+
     try {
       if (mode === "forgot") {
-        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
           redirectTo: `${window.location.origin}/auth`,
         });
         if (error) throw error;
         setResetSent(true);
         toast.success("Password reset email sent! Check your inbox.");
       } else if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email: email.trim(),
+        const { data, error } = await supabase.auth.signUp({
+          email: cleanEmail,
           password,
           options: {
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: `${window.location.origin}/auth`,
             data: { full_name: fullName.trim() },
           },
         });
         if (error) throw error;
-        toast.success("Account created successfully. You can now sign in.");
-        setMode("signin");
+
+        if (data?.session) {
+          toast.success("Account created successfully! Welcome to FaceTime Attendance.");
+          navigate({ to: target });
+        } else if (data?.user && data.user.identities && data.user.identities.length === 0) {
+          toast.error("This email is already registered. Please sign in or use forgot password.");
+          setMode("signin");
+        } else {
+          toast.success("Registration received! Please check your email to activate your account.");
+          setMode("signin");
+        }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
           password,
         });
-        if (error) throw error;
-        toast.success("Welcome back to FaceTime Attendance");
-        navigate({ to: target });
+
+        if (error) {
+          if (error.message.toLowerCase().includes("email not confirmed")) {
+            throw new Error("Your email address is not confirmed yet. Please check your email inbox for the activation link.");
+          }
+          if (error.message.toLowerCase().includes("invalid login credentials")) {
+            throw new Error("Incorrect email or password. Please re-check your credentials or click 'Forgot password?'.");
+          }
+          throw error;
+        }
+
+        if (data.session) {
+          toast.success("Welcome back to FaceTime Attendance");
+          navigate({ to: target });
+        }
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Authentication failed");
