@@ -131,48 +131,42 @@ function Kiosk() {
         return;
       }
 
-      const since = new Date(Date.now() - DUPLICATE_WINDOW_MS).toISOString();
-      const { data: recent } = await supabase
-        .from("attendance_events")
-        .select("id")
-        .eq("employee_id", match.employee_id)
-        .eq("kind", kindRef.current)
-        .gte("occurred_at", since)
-        .limit(1);
-
-      if (recent && recent.length > 0) {
-        finish({
-          ok: false,
-          name: match.full_name,
-          message: `${match.full_name} already logged a ${kindRef.current.replace("_", " ")} within the last minute.`,
-        });
-        return;
-      }
-
       const confidence = Math.max(0, 1 - match.distance / MATCH_THRESHOLD) * 0.4 + 0.6;
-      const { error: insertError } = await supabase.from("attendance_events").insert({
-        employee_id: match.employee_id,
-        kind: kindRef.current,
-        confidence,
-        liveness_score: livenessScore,
-        device_label: "Sentra Kiosk Station",
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+      const { data: logged, error: logError } = await supabase.rpc("log_attendance", {
+        _employee_id: match.employee_id,
+        _confidence: confidence,
+        _liveness: livenessScore,
+        _device_label: "Sentra Kiosk Station",
+        _tz: tz,
       });
 
-      if (insertError) {
-        finish({ ok: false, message: insertError.message });
+      if (logError) {
+        finish({ ok: false, name: match.full_name, message: logError.message });
         return;
       }
 
+      const event = logged?.[0];
+      const kindLogged = (event?.kind ?? "check_in") as Kind;
       finish({
         ok: true,
         name: match.full_name,
-        message: `${kindRef.current.replace("_", " ")} successfully recorded.`,
+        kind: kindLogged,
+        status: event?.status ?? "normal",
+        message:
+          `${KIND_LABELS[kindLogged].label} recorded` +
+          (event?.status === "late"
+            ? " — marked Late (after 9:30 AM)."
+            : event?.status === "early_leave"
+              ? " — early leave (before 5:00 PM)."
+              : "."),
         confidence,
         liveness: livenessScore,
       });
     },
     [finish],
   );
+
 
   // Recognition + liveness loop
   useEffect(() => {
