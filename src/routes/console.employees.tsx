@@ -5,6 +5,7 @@ import {
   ScanFace,
   Trash2,
   UserPlus,
+  Users,
   Building2,
   Search,
   CheckCircle2,
@@ -13,7 +14,7 @@ import {
   ChevronRight,
   Shield,
   Layers,
-  Users,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -132,46 +133,94 @@ function Employees() {
     return matchesSearch && matchesDept;
   });
 
+  const exportDirectoryCsv = () => {
+    const list = employees.data ?? [];
+    if (list.length === 0) return;
+    const headers = [
+      "Employee Code",
+      "Full Name",
+      "Email",
+      "Job Title",
+      "Department",
+      "Status",
+      "Enrolled Templates",
+    ];
+    const csvRows = list.map((e) => {
+      const dept = (e.departments as { name: string } | null)?.name ?? "Unassigned";
+      return [
+        `"${e.employee_code}"`,
+        `"${e.full_name.replace(/"/g, '""')}"`,
+        `"${e.email ?? ""}"`,
+        `"${(e.job_title ?? "").replace(/"/g, '""')}"`,
+        `"${dept.replace(/"/g, '""')}"`,
+        `"${e.status.toUpperCase()}"`,
+        `"${e.templates}"`,
+      ].join(",");
+    });
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...csvRows].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute(
+      "download",
+      `facetime_workforce_directory_${new Date().toISOString().slice(0, 10)}.csv`,
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-wrap items-end justify-between gap-4 pb-2 border-b border-white/10">
+      <div className="flex flex-wrap items-end justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-extrabold tracking-tight text-white font-display">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 font-display">
               Workforce Directory
             </h1>
             <Badge tone="primary" size="sm">
               {employees.data?.length ?? 0} TOTAL
             </Badge>
           </div>
-          <p className="mt-1 text-sm text-slate-400 font-light">
-            Enrol employee faces from 5 angles to build irreversible math vectors for attendance
-            kiosks.
+          <p className="mt-1 text-sm text-slate-500">
+            Register employees, upload portrait photos, or take live snapshots for instant attendance.
           </p>
         </div>
 
-        {isStaff && (
+        <div className="flex flex-wrap items-center gap-3">
           <Button
+            variant="outline"
             size="sm"
-            onClick={() => setIsAdding(!isAdding)}
-            icon={<UserPlus className="h-4 w-4" />}
+            onClick={exportDirectoryCsv}
+            disabled={(employees.data?.length ?? 0) === 0}
+            icon={<Download className="h-4 w-4 text-indigo-600" />}
           >
-            {isAdding ? "Close Form" : "New Employee"}
+            Export Directory CSV
           </Button>
-        )}
+          {isStaff && (
+            <Button
+              size="sm"
+              onClick={() => setIsAdding(!isAdding)}
+              icon={<UserPlus className="h-4 w-4" />}
+            >
+              {isAdding ? "Close Form" : "New Employee"}
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Add Employee Form Drawer (Collapsible) */}
+      {/* Add Employee Form Drawer */}
       {isStaff && isAdding && (
         <div className="grid gap-6 lg:grid-cols-3 animate-in fade-in slide-in-from-top-4 duration-300">
-          <Panel className="lg:col-span-2 border-sky-500/30">
-            <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
-              <h2 className="text-base font-bold text-white font-display flex items-center gap-2">
-                <UserPlus className="h-4.5 w-4.5 text-sky-400" />
+          <Panel className="lg:col-span-2 bg-white border border-indigo-200 shadow-sm rounded-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-4">
+              <h2 className="text-base font-bold text-slate-900 font-display flex items-center gap-2">
+                <UserPlus className="h-4.5 w-4.5 text-indigo-600" />
                 Register New Employee
               </h2>
-              <span className="text-xs text-muted-foreground">Creates directory record</span>
+              <span className="text-xs text-slate-500">Creates directory record</span>
             </div>
 
             <form
@@ -209,7 +258,7 @@ function Employees() {
                 <Input
                   value={form.job_title}
                   onChange={(e) => setForm({ ...form, job_title: e.target.value })}
-                  placeholder="Lead Systems Engineer"
+                  placeholder="Systems Engineer"
                 />
               </Field>
               <Field label="Department">
@@ -234,10 +283,10 @@ function Employees() {
           </Panel>
 
           {/* Department Management Panel */}
-          <Panel>
-            <div className="flex items-center gap-2 pb-3 border-b border-white/10 mb-4">
-              <Building2 className="h-4.5 w-4.5 text-sky-400" />
-              <h2 className="text-base font-bold text-white font-display">Departments</h2>
+          <Panel className="bg-white border border-slate-200 shadow-sm rounded-2xl">
+            <div className="flex items-center gap-2 pb-3 border-b border-slate-200 mb-4">
+              <Building2 className="h-4.5 w-4.5 text-indigo-600" />
+              <h2 className="text-base font-bold text-slate-900 font-display">Departments</h2>
             </div>
             <div className="flex gap-2">
               <Input
@@ -260,15 +309,13 @@ function Employees() {
               {(departments.data ?? []).map((d) => (
                 <span
                   key={d.id}
-                  className="inline-flex items-center rounded-lg bg-white/5 border border-white/10 px-2.5 py-1 text-xs text-slate-300"
+                  className="inline-flex items-center rounded-lg bg-slate-100 border border-slate-200 px-2.5 py-1 text-xs text-slate-700 font-medium"
                 >
                   {d.name}
                 </span>
               ))}
               {departments.data?.length === 0 && (
-                <span className="text-xs text-muted-foreground">
-                  No departments registered yet.
-                </span>
+                <span className="text-xs text-slate-400">No departments registered yet.</span>
               )}
             </div>
           </Panel>
@@ -276,21 +323,21 @@ function Employees() {
       )}
 
       {/* Directory Table Panel */}
-      <Panel className="p-0 overflow-hidden border border-white/10">
+      <Panel className="p-0 overflow-hidden border border-slate-200 bg-white rounded-2xl shadow-sm">
         {/* Table Header & Search Filter */}
-        <div className="border-b border-white/10 px-6 py-5 flex flex-wrap items-center justify-between gap-4 bg-slate-900/50">
+        <div className="border-b border-slate-200 px-6 py-4 flex flex-wrap items-center justify-between gap-4 bg-slate-50/70">
           <div>
-            <h2 className="text-lg font-bold text-white tracking-tight font-display">
+            <h2 className="text-base font-bold text-slate-900 tracking-tight font-display">
               Employee Directory
             </h2>
-            <span className="text-xs text-muted-foreground">
-              Face templates are irreversible 128-D math vectors stored on PostgreSQL pgvector.
+            <span className="text-xs text-slate-500">
+              Face templates are irreversible mathematical vectors stored in PostgreSQL.
             </span>
           </div>
 
           <div className="flex items-center gap-3">
             <div className="relative w-48 sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <Input
                 placeholder="Search by name, code, role..."
                 value={search}
@@ -302,7 +349,7 @@ function Employees() {
             <select
               value={deptFilter}
               onChange={(e) => setDeptFilter(e.target.value)}
-              className="h-9 rounded-xl border border-white/10 bg-slate-950 px-3 text-xs text-foreground focus:border-sky-400 focus:outline-none"
+              className="h-9 rounded-xl border border-slate-300 bg-white px-3 text-xs text-slate-800 focus:border-indigo-600 focus:outline-none"
             >
               <option value="all">All Departments</option>
               {(departments.data ?? []).map((d) => (
@@ -316,18 +363,18 @@ function Employees() {
 
         {/* Table Content */}
         {employees.isLoading ? (
-          <div className="px-6 py-12 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
-            <div className="h-4 w-4 rounded-full border-2 border-sky-400 border-t-transparent animate-spin" />
+          <div className="px-6 py-12 text-center text-sm text-slate-500 flex items-center justify-center gap-2">
+            <div className="h-4 w-4 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
             Loading employee directory...
           </div>
         ) : filteredEmployees.length === 0 ? (
           <div className="px-6 py-16 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-muted-foreground mb-3">
-              <Users className="h-6 w-6 text-sky-400" />
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 border border-slate-200 text-slate-500 mb-3">
+              <Users className="h-6 w-6 text-indigo-600" />
             </div>
-            <h3 className="text-base font-semibold text-white">No employees found</h3>
-            <p className="mt-1 text-xs text-muted-foreground max-w-sm mx-auto">
-              Add your first employee to begin the 5-angle biometric face enrolment process.
+            <h3 className="text-base font-semibold text-slate-900">No employees found</h3>
+            <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
+              Add your first employee to start biometric face enrollment.
             </p>
             {isStaff && (
               <div className="mt-5">
@@ -344,41 +391,41 @@ function Employees() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-white/10 bg-slate-950/60 text-xs font-semibold uppercase tracking-wider text-muted-foreground font-display">
+              <thead className="border-b border-slate-200 bg-slate-100/70 text-xs font-semibold uppercase tracking-wider text-slate-600 font-display">
                 <tr>
-                  <th className="px-6 py-3.5">Code</th>
-                  <th className="px-6 py-3.5">Employee</th>
-                  <th className="px-6 py-3.5">Department</th>
-                  <th className="px-6 py-3.5">Status</th>
-                  <th className="px-6 py-3.5">Biometric Templates</th>
-                  <th className="px-6 py-3.5 text-right">Actions</th>
+                  <th className="px-6 py-3">Code</th>
+                  <th className="px-6 py-3">Employee</th>
+                  <th className="px-6 py-3">Department</th>
+                  <th className="px-6 py-3">Status</th>
+                  <th className="px-6 py-3">Biometric Profile</th>
+                  <th className="px-6 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-slate-100">
                 {filteredEmployees.map((e) => {
                   const hasTemplates = e.templates > 0;
 
                   return (
-                    <tr key={e.id} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="px-6 py-4 font-mono text-xs text-sky-300 font-semibold">
+                    <tr key={e.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4 font-mono text-xs text-indigo-700 font-bold">
                         {e.employee_code}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <Avatar name={e.full_name} size="sm" />
                           <div>
-                            <span className="font-semibold text-white block text-sm">
+                            <span className="font-semibold text-slate-900 block text-sm">
                               {e.full_name}
                             </span>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-xs text-slate-500">
                               {e.job_title || "No title set"}
                             </span>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-xs text-slate-300">
+                      <td className="px-6 py-4 text-xs text-slate-600">
                         {(e.departments as { name: string } | null)?.name ?? (
-                          <span className="text-muted-foreground/60">Unassigned</span>
+                          <span className="text-slate-400">Unassigned</span>
                         )}
                       </td>
                       <td className="px-6 py-4">
@@ -388,14 +435,12 @@ function Employees() {
                       </td>
                       <td className="px-6 py-4">
                         {hasTemplates ? (
-                          <div className="flex items-center gap-2">
-                            <Badge tone="success" pulse size="sm">
-                              {e.templates} ANGLES ENROLLED
-                            </Badge>
-                          </div>
+                          <Badge tone="success" pulse size="sm">
+                            ENROLLED ({e.templates} TEMPLATES)
+                          </Badge>
                         ) : (
                           <Badge tone="warning" size="sm">
-                            AWAITING ENROLMENT
+                            AWAITING ENROLLMENT
                           </Badge>
                         )}
                       </td>
@@ -421,9 +466,9 @@ function Employees() {
                                 }
                               }}
                               title="Reset face templates"
-                              className="text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10"
+                              className="text-slate-400 hover:text-rose-600 hover:bg-rose-50"
                             >
-                              <Trash2 className="h-3 w-3" />
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           )}
                         </div>

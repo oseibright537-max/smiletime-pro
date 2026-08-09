@@ -15,6 +15,7 @@ import { Route as ConsoleRouteImport } from './routes/console'
 import { Route as KioskRouteImport } from './routes/kiosk'
 import { Route as ConsoleIndexRouteImport } from './routes/console.index'
 import { Route as ConsoleEmployeesRouteImport } from './routes/console.employees'
+import { Route as ConsoleSettingsRouteImport } from './routes/console.settings'
 import { Route as ConsoleEnrollEmployeeIdRouteImport } from './routes/console.enroll.$employeeId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -47,6 +48,11 @@ const ConsoleEmployeesRoute = ConsoleEmployeesRouteImport.update({
   path: '/employees',
   getParentRoute: () => ConsoleRoute,
 } as any)
+const ConsoleSettingsRoute = ConsoleSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => ConsoleRoute,
+} as any)
 const ConsoleEnrollEmployeeIdRoute = ConsoleEnrollEmployeeIdRouteImport.update({
   id: '/enroll/$employeeId',
   path: '/enroll/$employeeId',
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/console': typeof ConsoleRouteWithChildren
   '/kiosk': typeof KioskRoute
   '/console/employees': typeof ConsoleEmployeesRoute
+  '/console/settings': typeof ConsoleSettingsRoute
   '/console/': typeof ConsoleIndexRoute
   '/console/enroll/$employeeId': typeof ConsoleEnrollEmployeeIdRoute
 }
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/kiosk': typeof KioskRoute
   '/console/employees': typeof ConsoleEmployeesRoute
+  '/console/settings': typeof ConsoleSettingsRoute
   '/console': typeof ConsoleIndexRoute
   '/console/enroll/$employeeId': typeof ConsoleEnrollEmployeeIdRoute
 }
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/console': typeof ConsoleRouteWithChildren
   '/kiosk': typeof KioskRoute
   '/console/employees': typeof ConsoleEmployeesRoute
+  '/console/settings': typeof ConsoleSettingsRoute
   '/console/': typeof ConsoleIndexRoute
   '/console/enroll/$employeeId': typeof ConsoleEnrollEmployeeIdRoute
 }
@@ -88,6 +97,7 @@ export interface FileRouteTypes {
     | '/console'
     | '/kiosk'
     | '/console/employees'
+    | '/console/settings'
     | '/console/'
     | '/console/enroll/$employeeId'
   fileRoutesByTo: FileRoutesByTo
@@ -96,6 +106,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/kiosk'
     | '/console/employees'
+    | '/console/settings'
     | '/console'
     | '/console/enroll/$employeeId'
   id:
@@ -105,6 +116,7 @@ export interface FileRouteTypes {
     | '/console'
     | '/kiosk'
     | '/console/employees'
+    | '/console/settings'
     | '/console/'
     | '/console/enroll/$employeeId'
   fileRoutesById: FileRoutesById
@@ -160,6 +172,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConsoleEmployeesRouteImport
       parentRoute: typeof ConsoleRoute
     }
+    '/console/settings': {
+      id: '/console/settings'
+      path: '/settings'
+      fullPath: '/console/settings'
+      preLoaderRoute: typeof ConsoleSettingsRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
     '/console/enroll/$employeeId': {
       id: '/console/enroll/$employeeId'
       path: '/enroll/$employeeId'
@@ -172,12 +191,14 @@ declare module '@tanstack/react-router' {
 
 interface ConsoleRouteChildren {
   ConsoleEmployeesRoute: typeof ConsoleEmployeesRoute
+  ConsoleSettingsRoute: typeof ConsoleSettingsRoute
   ConsoleIndexRoute: typeof ConsoleIndexRoute
   ConsoleEnrollEmployeeIdRoute: typeof ConsoleEnrollEmployeeIdRoute
 }
 
 const ConsoleRouteChildren: ConsoleRouteChildren = {
   ConsoleEmployeesRoute: ConsoleEmployeesRoute,
+  ConsoleSettingsRoute: ConsoleSettingsRoute,
   ConsoleIndexRoute: ConsoleIndexRoute,
   ConsoleEnrollEmployeeIdRoute: ConsoleEnrollEmployeeIdRoute,
 }
@@ -194,3 +215,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

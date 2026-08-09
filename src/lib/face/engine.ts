@@ -141,14 +141,20 @@ function toSample(
 }
 
 /** Detects the single most prominent face and returns its embedding + geometry. */
-export async function analyseFrame(video: HTMLVideoElement): Promise<FaceSample | null> {
+export async function analyseFrame(
+  video: HTMLVideoElement,
+  options: { inputSize?: number; scoreThreshold?: number } = {},
+): Promise<FaceSample | null> {
   const faceapi = await getFaceApi();
   if (!video.videoWidth) return null;
+
+  const inputSize = options.inputSize ?? 416;
+  const scoreThreshold = options.scoreThreshold ?? 0.35;
 
   const result = await faceapi
     .detectSingleFace(
       video,
-      new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 }),
+      new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold }),
     )
     .withFaceLandmarks()
     .withFaceDescriptor();
@@ -158,17 +164,22 @@ export async function analyseFrame(video: HTMLVideoElement): Promise<FaceSample 
 }
 
 /**
- * Detects every face in the frame (largest first). Enrolment needs the count so
- * it can refuse frames where a bystander is also visible.
+ * Detects every face in the frame (largest first).
  */
-export async function analyseAllFaces(video: HTMLVideoElement): Promise<FaceSample[]> {
+export async function analyseAllFaces(
+  video: HTMLVideoElement,
+  options: { inputSize?: number; scoreThreshold?: number } = {},
+): Promise<FaceSample[]> {
   const faceapi = await getFaceApi();
   if (!video.videoWidth) return [];
+
+  const inputSize = options.inputSize ?? 416;
+  const scoreThreshold = options.scoreThreshold ?? 0.35;
 
   const results = await faceapi
     .detectAllFaces(
       video,
-      new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 }),
+      new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold }),
     )
     .withFaceLandmarks()
     .withFaceDescriptors();
@@ -177,6 +188,7 @@ export async function analyseAllFaces(video: HTMLVideoElement): Promise<FaceSamp
     .map((r) => toSample(r as never, video.videoWidth))
     .sort((a, b) => b.box.width - a.box.width);
 }
+
 
 /** L2-normalised mean of several descriptors — a more stable template. */
 export function averageDescriptors(descriptors: Float32Array[]): Float32Array {
@@ -221,3 +233,236 @@ export const POSES = [
 ] as const;
 
 export type PoseKey = (typeof POSES)[number]["key"];
+
+/** Detects the single most prominent face in an image/canvas element. */
+export async function analyseImageElement(
+  image: HTMLImageElement | HTMLCanvasElement,
+): Promise<FaceSample | null> {
+  const faceapi = await getFaceApi();
+  const width = "naturalWidth" in image ? image.naturalWidth || image.width : image.width;
+  if (!width) return null;
+
+  const result = await faceapi
+    .detectSingleFace(
+      image,
+      new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.4 }),
+    )
+    .withFaceLandmarks()
+    .withFaceDescriptor();
+
+  if (!result) return null;
+  return toSample(result as never, width);
+}
+
+/** Detects all faces in an image or canvas element (sorted largest first). */
+export async function analyseAllImageFaces(
+  image: HTMLImageElement | HTMLCanvasElement,
+): Promise<FaceSample[]> {
+  const faceapi = await getFaceApi();
+  const width = "naturalWidth" in image ? image.naturalWidth || image.width : image.width;
+  if (!width) return [];
+
+  const results = await faceapi
+    .detectAllFaces(
+      image,
+      new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.4 }),
+    )
+    .withFaceLandmarks()
+    .withFaceDescriptors();
+
+  return results
+    .map((r) => toSample(r as never, width))
+    .sort((a, b) => b.box.width - a.box.width);
+}
+
+/**
+ * Extracts 128-D mathematical embedding vector directly from an uploaded photo file.
+ * The image is processed in client-side memory and never transmitted or saved.
+ */
+export async function extractEmbeddingFromFile(file: File | Blob): Promise<{
+  success: boolean;
+  descriptor?: Float32Array;
+  sample?: FaceSample;
+  faceCount: number;
+  error?: string;
+  previewUrl?: string;
+}> {
+  return new Promise((resolve) => {
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+
+    img.onload = async () => {
+      try {
+        const samples = await analyseAllImageFaces(img);
+        if (samples.length === 0) {
+          URL.revokeObjectURL(objectUrl);
+          resolve({
+            success: false,
+            faceCount: 0,
+            error: "No face detected. Please upload a clear front-facing portrait photo.",
+          });
+          return;
+        }
+
+        if (samples.length > 1) {
+          URL.revokeObjectURL(objectUrl);
+          resolve({
+            success: false,
+            faceCount: samples.length,
+            error: `Multiple faces (${samples.length}) detected. Please upload a photo with only one person.`,
+          });
+          return;
+        }
+
+        const sample = samples[0]!;
+        // Keep previewUrl for temporary client-side UI confirmation, will be cleaned up on save/exit
+        resolve({
+          success: true,
+          descriptor: sample.descriptor,
+          sample,
+          faceCount: 1,
+          previewUrl: objectUrl,
+        });
+      } catch (err) {
+        URL.revokeObjectURL(objectUrl);
+        resolve({
+          success: false,
+          faceCount: 0,
+          error: (err as Error).message || "Failed to process image with neural model.",
+        });
+      }
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve({
+        success: false,
+        faceCount: 0,
+        error: "Failed to load image file. Please verify it is a valid JPG, PNG, or WebP file.",
+      });
+    };
+
+    img.src = objectUrl;
+  });
+}
+
+/**
+ * Extracts 128-D mathematical embedding vector from the current live camera frame.
+ */
+export async function extractEmbeddingFromSnapshot(video: HTMLVideoElement): Promise<{
+  success: boolean;
+  descriptor?: Float32Array;
+  sample?: FaceSample;
+  faceCount: number;
+  error?: string;
+}> {
+  if (!video.videoWidth || !video.videoHeight) {
+    return {
+      success: false,
+      faceCount: 0,
+      error: "Camera stream not ready. Please wait for camera initialization.",
+    };
+  }
+
+  try {
+    const samples = await analyseAllFaces(video);
+    if (samples.length === 0) {
+      return {
+        success: false,
+        faceCount: 0,
+        error: "No face detected in frame. Please face the camera directly.",
+      };
+    }
+
+    if (samples.length > 1) {
+      return {
+        success: false,
+        faceCount: samples.length,
+        error: "Multiple faces detected. Please make sure only one person is in front of the camera.",
+      };
+    }
+
+    const sample = samples[0]!;
+    return {
+      success: true,
+      descriptor: sample.descriptor,
+      sample,
+      faceCount: 1,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      faceCount: 0,
+      error: (err as Error).message || "Failed to extract facial vector from camera.",
+    };
+  }
+}
+
+/** Computes cosine distance between two 128-D descriptors: 0 = identical, 1 = orthogonal */
+export function cosineDistance(a: Float32Array, b: Float32Array): number {
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+  const len = Math.min(a.length, b.length);
+  for (let i = 0; i < len; i++) {
+    const ai = a[i]!;
+    const bi = b[i]!;
+    dot += ai * bi;
+    normA += ai * ai;
+    normB += bi * bi;
+  }
+  const denom = Math.sqrt(normA) * Math.sqrt(normB);
+  if (!denom) return 1;
+  return Math.max(0, 1 - dot / denom);
+}
+
+/** Parses a pgvector string "[0.123, -0.456, ...]" into Float32Array */
+export function parseVectorLiteral(raw: string | number[] | Float32Array): Float32Array | null {
+  if (raw instanceof Float32Array) return raw;
+  if (Array.isArray(raw)) return new Float32Array(raw);
+  if (typeof raw !== "string") return null;
+
+  try {
+    const trimmed = raw.trim().replace(/^\[|\]$/g, "");
+    if (!trimmed) return null;
+    const parts = trimmed.split(",").map((v) => parseFloat(v.trim()));
+    if (parts.length === 0 || isNaN(parts[0]!)) return null;
+    return new Float32Array(parts);
+  } catch {
+    return null;
+  }
+}
+
+export type EnrolledCandidate = {
+  employee_id: string;
+  full_name: string;
+  employee_code: string;
+  embedding: Float32Array;
+};
+
+/** Finds best matching enrolled employee vector locally in memory */
+export function findBestVectorMatch(
+  probe: Float32Array,
+  enrolled: EnrolledCandidate[],
+  maxDistance = 0.45,
+): { match: EnrolledCandidate | null; distance: number; confidence: number } {
+  let bestCandidate: EnrolledCandidate | null = null;
+  let bestDist = 999;
+
+  for (const item of enrolled) {
+    const dist = cosineDistance(probe, item.embedding);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestCandidate = item;
+    }
+  }
+
+  if (bestCandidate && bestDist <= maxDistance) {
+    const confidence = Math.max(0.65, Math.min(0.99, 1 - bestDist * 0.85));
+    return { match: bestCandidate, distance: bestDist, confidence };
+  }
+
+  return { match: null, distance: bestDist, confidence: 0 };
+}
+

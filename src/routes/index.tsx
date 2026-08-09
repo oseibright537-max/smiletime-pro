@@ -10,25 +10,21 @@ import {
   ArrowRight,
   Sparkles,
   CheckCircle2,
-  Cpu,
-  Fingerprint,
   Zap,
-  Eye,
-  Shield,
-  Layers,
 } from "lucide-react";
 import { Button, Badge } from "@/components/ui/primitives";
+import { Logo } from "@/components/ui/logo";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Sentra — Enterprise Biometric Facial Attendance" },
+      { title: "FaceTime Attendance — Enterprise Biometric Facial Recognition" },
       {
         name: "description",
         content:
           "Enterprise facial recognition attendance with on-device neural matching, active liveness verification, and zero raw photo storage.",
       },
-      { property: "og:title", content: "Sentra — Enterprise Biometric Attendance" },
+      { property: "og:title", content: "FaceTime Attendance — Enterprise Biometric Facial Recognition" },
       {
         property: "og:description",
         content:
@@ -58,19 +54,19 @@ const features = [
     icon: Lock,
     tag: "Privacy By Design",
     title: "Irreversible Vector Storage",
-    body: "Raw video frames never leave the client memory. Only 128-float mathematical vectors are stored in PostgreSQL using pgvector cosine distance.",
+    body: "Raw video frames never leave client memory. Only 128-float mathematical vectors are stored in PostgreSQL using pgvector cosine distance.",
   },
   {
     icon: Users,
     tag: "HR Governance",
     title: "Workforce Directory",
-    body: "Manage multi-department staff, 5-angle face enrollment workflows, job titles, and status controls with role-scoped staff permissions.",
+    body: "Manage multi-department staff, live camera or picture upload enrollment workflows, job titles, and status controls with role-scoped staff permissions.",
   },
   {
     icon: Activity,
     tag: "Attendance Engine",
     title: "Multi-State Event Logging",
-    body: "Check-in, check-out, break-start, and break-end events with duplicate suppression windows and real-time confidence scores.",
+    body: "Clock-in, clock-out, break-start, and break-end events with duplicate suppression windows and real-time confidence scores.",
   },
   {
     icon: LineChart,
@@ -81,10 +77,10 @@ const features = [
 ];
 
 const telemetryStats = [
-  { value: "< 280ms", label: "Match Latency", hint: "On-device neural inference" },
+  { value: "< 200ms", label: "Match Latency", hint: "On-device vector matching" },
   { value: "99.98%", label: "Liveness Accuracy", hint: "Active anti-spoof verification" },
   { value: "0 bytes", label: "Raw Photos Uploaded", hint: "100% mathematical vectors" },
-  { value: "5 Angles", label: "Multi-Pose Enrolment", hint: "Front, Left, Right, Up, Down" },
+  { value: "Instant", label: "Camera Enrollment", hint: "Snapshot or Photo Upload" },
 ];
 
 function Landing() {
@@ -99,374 +95,261 @@ function Landing() {
   }, []);
 
   return (
-    <main className="min-h-screen hero-surface relative selection:bg-sky-500/30 selection:text-sky-200">
+    <main className="min-h-screen bg-slate-50 relative selection:bg-indigo-500/20 selection:text-indigo-900">
       {/* Ambient background glow accents */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[800px] h-[450px] bg-sky-500/10 rounded-full blur-[140px]" />
-        <div className="absolute top-[35%] -left-32 w-[500px] h-[350px] bg-emerald-500/8 rounded-full blur-[120px]" />
-        <div className="absolute top-[60%] -right-32 w-[600px] h-[400px] bg-indigo-500/8 rounded-full blur-[130px]" />
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[800px] h-[450px] bg-indigo-500/5 rounded-full blur-[140px]" />
+        <div className="absolute top-[35%] -left-32 w-[500px] h-[350px] bg-emerald-500/5 rounded-full blur-[120px]" />
+        <div className="absolute top-[60%] -right-32 w-[600px] h-[400px] bg-blue-500/5 rounded-full blur-[130px]" />
       </div>
 
-      {/* Navigation Bar */}
-      <header className="sticky top-0 z-50 glass-bar transition-all duration-200">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <Link to="/" className="flex items-center gap-3 group">
-            <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-cyan-500 shadow-lg shadow-sky-500/25 transition-transform group-hover:scale-105">
-              <ScanFace className="h-5 w-5 text-slate-950" />
-              <span className="absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400" />
-              </span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-display text-lg font-bold tracking-tight text-white">
-                  Sentra
-                </span>
-                <Badge tone="primary" size="sm">
-                  v2.4 AI
-                </Badge>
-              </div>
-              <span className="text-[10px] text-muted-foreground uppercase tracking-widest block font-mono">
-                Biometric Attendance
-              </span>
-            </div>
-          </Link>
+      {/* Modern Floating Island Navigation Bar */}
+      <div className="sticky top-4 z-50 px-4 sm:px-6">
+        <header className="mx-auto max-w-6xl rounded-2xl bg-white/85 backdrop-blur-xl border border-slate-200/80 shadow-lg shadow-slate-900/5 transition-all duration-300">
+          <div className="flex items-center justify-between px-5 py-3">
+            <Link to="/" className="group">
+              <Logo size="sm" subtitle="Biometric Attendance" />
+            </Link>
 
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
-            <a href="#features" className="hover:text-white transition-colors">
-              Capabilities
-            </a>
-            <a href="#architecture" className="hover:text-white transition-colors">
-              Privacy Architecture
-            </a>
-            <a href="#telemetry" className="hover:text-white transition-colors">
-              Telemetry
-            </a>
-          </nav>
-
-          <div className="flex items-center gap-3">
-            <Link to="/kiosk">
-              <Button
-                variant="outline"
-                size="sm"
-                icon={<Zap className="h-3.5 w-3.5 text-sky-400" />}
+            <nav className="hidden md:flex items-center gap-1 bg-slate-100/70 p-1 rounded-xl border border-slate-200/60 text-xs font-semibold text-slate-600">
+              <a
+                href="#features"
+                className="px-3 py-1.5 rounded-lg hover:text-slate-900 hover:bg-white transition-all"
               >
-                Kiosk Terminal
-              </Button>
-            </Link>
-            <Link to="/auth" search={{ next: "/console" }}>
-              <Button size="sm" icon={<ArrowRight className="h-3.5 w-3.5" />}>
-                Sign In
-              </Button>
-            </Link>
+                Features
+              </a>
+              <a
+                href="#architecture"
+                className="px-3 py-1.5 rounded-lg hover:text-slate-900 hover:bg-white transition-all"
+              >
+                Zero-Photo Privacy
+              </a>
+              <a
+                href="#telemetry"
+                className="px-3 py-1.5 rounded-lg hover:text-slate-900 hover:bg-white transition-all"
+              >
+                Live Metrics
+              </a>
+            </nav>
+
+            <div className="flex items-center gap-2.5">
+              <Link to="/kiosk">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={<Zap className="h-3.5 w-3.5 text-indigo-600" />}
+                >
+                  Kiosk Mode
+                </Button>
+              </Link>
+              <Link to="/auth" search={{ next: "/console" }}>
+                <Button size="sm">Admin Console</Button>
+              </Link>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      </div>
 
       {/* Hero Section */}
-      <section className="relative z-10 mx-auto max-w-7xl px-6 pt-16 pb-20 md:pt-24 md:pb-28">
-        <div className="grid gap-12 lg:grid-cols-12 lg:items-center">
-          {/* Hero Left Content */}
-          <div className="lg:col-span-7 space-y-8">
-            <div className="inline-flex items-center gap-2.5 rounded-full border border-sky-400/20 bg-sky-500/10 px-4 py-1.5 backdrop-blur-md">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping-slow absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
-              </span>
-              <span className="text-xs font-semibold text-sky-300 font-display uppercase tracking-wide">
-                On-Device Face Matching · Active Anti-Spoof
-              </span>
+      <section className="relative z-10 mx-auto max-w-7xl px-6 pt-16 pb-20 sm:pt-24 sm:pb-28">
+        <div className="grid lg:grid-cols-12 gap-12 items-center">
+          <div className="lg:col-span-7 space-y-6">
+            <div className="inline-flex items-center gap-2 rounded-full bg-indigo-50 border border-indigo-200 px-3.5 py-1.5 text-xs text-indigo-700 font-semibold shadow-xs">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              <span>Zero Photo Storage · Irreversible Vectors</span>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.12]">
-              Attendance that recognises your{" "}
-              <span className="bg-gradient-to-r from-sky-300 via-cyan-200 to-teal-300 bg-clip-text text-transparent">
-                people
-              </span>
-              , not their badges.
+            <h1 className="font-display text-4xl sm:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.1]">
+              Enterprise facial attendance without storing photos.
             </h1>
 
-            <p className="text-lg sm:text-xl text-slate-300/90 leading-relaxed max-w-2xl font-light">
-              Sentra replaces fragile RFID fobs, dirty fingerprint scanners, and manual logbooks
-              with lightning-fast, liveness-verified facial recognition. Enrol once from five
-              angles; capture every subsequent check-in within two seconds.
+            <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl font-light">
+              High-speed biometric clock-in terminal powered by on-device neural vectors. Enrol
+              employees via live webcam or portrait photo upload with instant Euclidean matching.
             </p>
 
             <div className="flex flex-wrap items-center gap-4 pt-2">
               <Link to="/auth" search={{ next: "/console" }}>
-                <Button size="lg" icon={<Sparkles className="h-4.5 w-4.5" />}>
-                  Open Admin Console
+                <Button size="lg" icon={<ArrowRight className="h-4 w-4" />}>
+                  Access Workforce Console
                 </Button>
               </Link>
               <Link to="/kiosk">
                 <Button
                   size="lg"
                   variant="outline"
-                  icon={<ScanFace className="h-4.5 w-4.5 text-sky-400" />}
+                  icon={<ScanFace className="h-4 w-4 text-indigo-600" />}
                 >
                   Launch Attendance Kiosk
                 </Button>
               </Link>
             </div>
 
-            {/* Quick Feature Badges */}
-            <div className="pt-4 flex flex-wrap items-center gap-6 text-xs text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                <span>Zero raw photo upload</span>
+            <div className="pt-6 border-t border-slate-200 grid grid-cols-3 gap-6 text-slate-600 text-xs">
+              <div className="flex items-center gap-2 font-medium">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span>On-Device Face Matching</span>
               </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                <span>Active blink & head-motion check</span>
+              <div className="flex items-center gap-2 font-medium">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span>Zero Photo Storage</span>
               </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                <span>PostgreSQL pgvector cosine matching</span>
+              <div className="flex items-center gap-2 font-medium">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span>pgvector Integration</span>
               </div>
             </div>
           </div>
 
-          {/* Hero Right: Interactive Biometric HUD Simulation */}
-          <div className="lg:col-span-5 relative">
-            <div className="relative rounded-3xl border border-white/12 bg-slate-950/80 p-5 shadow-2xl backdrop-blur-xl glow-ring">
-              {/* Terminal Titlebar */}
-              <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+          {/* Interactive Kiosk Simulator Card */}
+          <div className="lg:col-span-5">
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl relative overflow-hidden">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
                 <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full bg-rose-500/80" />
-                  <div className="h-3 w-3 rounded-full bg-amber-500/80" />
-                  <div className="h-3 w-3 rounded-full bg-emerald-500/80" />
-                  <span className="text-xs font-mono text-muted-foreground ml-2">
-                    SENTRA-KIOSK-TERMINAL #01
-                  </span>
+                  <div className="h-3 w-3 rounded-full bg-rose-400" />
+                  <div className="h-3 w-3 rounded-full bg-amber-400" />
+                  <div className="h-3 w-3 rounded-full bg-emerald-400" />
                 </div>
                 <Badge tone="success" pulse size="sm">
-                  ONLINE
+                  LIVE SCANNER DEMO
                 </Badge>
               </div>
 
-              {/* Simulated Camera Viewfinder */}
-              <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-slate-900 border border-white/10 flex items-center justify-center">
-                {/* Background grid */}
-                <div
-                  className="absolute inset-0 opacity-20"
-                  style={{
-                    backgroundImage:
-                      "radial-gradient(circle at 1px 1px, rgba(56, 189, 248, 0.4) 1px, transparent 0)",
-                    backgroundSize: "24px 24px",
-                  }}
-                />
-
-                {/* Laser scanline animation */}
-                <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-sky-400 to-transparent shadow-[0_0_15px_#38bdf8] animate-scanline z-20" />
-
-                {/* HUD Corner Brackets */}
-                <div className="absolute inset-6 pointer-events-none z-10 flex flex-col justify-between">
-                  <div className="flex justify-between">
-                    <div className="w-6 h-6 border-t-2 border-l-2 border-sky-400" />
-                    <div className="w-6 h-6 border-t-2 border-r-2 border-sky-400" />
-                  </div>
-                  <div className="flex justify-between">
-                    <div className="w-6 h-6 border-b-2 border-l-2 border-sky-400" />
-                    <div className="w-6 h-6 border-b-2 border-r-2 border-sky-400" />
-                  </div>
+              {/* Viewfinder simulation */}
+              <div className="relative aspect-video rounded-2xl bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-white overflow-hidden shadow-inner">
+                <div className="w-40 h-40 rounded-full border-2 border-indigo-400/80 flex items-center justify-center relative">
+                  <div className="w-8 h-8 border-t-2 border-l-2 border-indigo-400 absolute top-4 left-4" />
+                  <div className="w-8 h-8 border-t-2 border-r-2 border-indigo-400 absolute top-4 right-4" />
+                  <div className="w-8 h-8 border-b-2 border-l-2 border-indigo-400 absolute bottom-4 left-4" />
+                  <div className="w-8 h-8 border-b-2 border-r-2 border-indigo-400 absolute bottom-4 right-4" />
+                  <ScanFace className="h-16 w-16 text-indigo-400 animate-pulse" />
                 </div>
 
-                {/* Biometric Target Reticle */}
-                <div className="relative z-10 flex flex-col items-center">
-                  <div className="relative h-40 w-40 rounded-full border border-sky-400/40 flex items-center justify-center">
-                    {/* Rotating Radar Ring */}
-                    <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-sky-400/80 border-r-sky-400/30 animate-radar" />
-
-                    {/* Inner Target Wireframe */}
-                    <div className="relative h-28 w-28 rounded-full bg-sky-500/10 border border-sky-400/60 flex items-center justify-center">
-                      <ScanFace className="h-14 w-14 text-sky-300 transition-all duration-300" />
-
-                      {/* 68 Alignment point markers simulation */}
-                      <span className="absolute top-8 left-8 h-1 w-1 rounded-full bg-cyan-300 animate-ping" />
-                      <span className="absolute top-8 right-8 h-1 w-1 rounded-full bg-cyan-300 animate-ping" />
-                      <span className="absolute bottom-8 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-emerald-400" />
-                    </div>
-                  </div>
-
-                  {/* Dynamic Status Feedback */}
-                  <div className="mt-4 px-4 py-1.5 rounded-full bg-slate-950/80 border border-sky-400/30 text-xs font-mono text-sky-300 backdrop-blur-md flex items-center gap-2">
-                    {activeStep === 0 && (
-                      <>
-                        <span className="h-2 w-2 rounded-full bg-sky-400 animate-ping" />
-                        Detecting face landmarks...
-                      </>
-                    )}
-                    {activeStep === 1 && (
-                      <>
-                        <Eye className="h-3.5 w-3.5 text-amber-400" />
-                        Liveness check: Blink challenge OK
-                      </>
-                    )}
-                    {activeStep === 2 && (
-                      <>
-                        <Cpu className="h-3.5 w-3.5 text-sky-400" />
-                        128-D vector cosine matching...
-                      </>
-                    )}
-                    {activeStep === 3 && (
-                      <>
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                        Identity match verified (0.071 dist)
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Top-Right Live Telemetry overlay */}
-                <div className="absolute top-3 right-3 z-20 font-mono text-[10px] text-sky-300/80 bg-slate-950/70 px-2.5 py-1 rounded border border-white/10 backdrop-blur-sm">
-                  FPS: 60 · RES: 1280x720
+                <div className="mt-4 font-mono text-xs text-indigo-300">
+                  {activeStep === 0 && "Aligning 68 Facial Landmarks…"}
+                  {activeStep === 1 && "Computing 128-D Vector…"}
+                  {activeStep === 2 && "Matching Postgres pgvector Index…"}
+                  {activeStep === 3 && "Match Verified: Elena Rostova (EMP-0142)"}
                 </div>
               </div>
 
-              {/* Recognized Card Simulation */}
-              <div className="mt-4 rounded-xl bg-white/5 border border-white/10 p-3.5 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-sky-400 to-emerald-400 flex items-center justify-center font-display font-bold text-slate-950 text-sm">
-                    ER
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-semibold text-white">Elena Rostova</h4>
-                    <p className="text-xs text-muted-foreground">Engineering Lead · EMP-0092</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <Badge tone="success" pulse size="sm">
-                    CHECK IN · 09:02 AM
-                  </Badge>
-                  <span className="text-[10px] text-muted-foreground block font-mono mt-1">
-                    99.4% confidence
-                  </span>
-                </div>
+              <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span className="text-slate-500">Recognition Pipeline:</span>
+                <span className="font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                  Cosine Match · 99.4%
+                </span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Telemetry Stats Strip */}
-      <section
-        id="telemetry"
-        className="relative z-10 border-y border-white/10 bg-slate-950/60 backdrop-blur-md"
-      >
-        <div className="mx-auto max-w-7xl px-6 py-12">
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {telemetryStats.map((stat) => (
-              <div
-                key={stat.label}
-                className="space-y-1 text-center sm:text-left border-l-2 border-sky-400/40 pl-4"
-              >
-                <div className="font-display text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-                  {stat.value}
-                </div>
-                <div className="text-sm font-semibold text-slate-200">{stat.label}</div>
-                <div className="text-xs text-muted-foreground">{stat.hint}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Features Grid */}
-      <section id="features" className="relative z-10 mx-auto max-w-7xl px-6 py-24">
-        <div className="max-w-2xl mx-auto text-center space-y-4 mb-16">
-          <Badge tone="primary" size="md">
-            ENGINEERED FOR SCALE
-          </Badge>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-            Security, speed, and privacy in equal measure.
-          </h2>
-          <p className="text-muted-foreground text-base leading-relaxed">
-            Every architectural decision prioritizes zero-friction employee verification without
-            compromising biometric compliance or employee privacy.
-          </p>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {features.map((f) => (
-            <article
-              key={f.title}
-              className="panel-interactive p-7 flex flex-col justify-between group relative overflow-hidden"
+      {/* Telemetry Stats Grid */}
+      <section id="telemetry" className="relative z-10 mx-auto max-w-7xl px-6 py-12">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {telemetryStats.map((s) => (
+            <div
+              key={s.label}
+              className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between"
             >
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500/10 border border-sky-400/20 text-sky-400 group-hover:scale-110 group-hover:border-sky-400/50 group-hover:bg-sky-500/20 transition-all duration-300">
-                    <f.icon className="h-6 w-6" />
-                  </div>
-                  <span className="text-[11px] font-mono font-medium text-slate-400 uppercase tracking-wider bg-white/5 px-2.5 py-1 rounded-md border border-white/5">
-                    {f.tag}
-                  </span>
-                </div>
-                <h3 className="text-xl font-bold text-white tracking-tight group-hover:text-sky-300 transition-colors">
-                  {f.title}
-                </h3>
-                <p className="text-sm text-slate-300/80 leading-relaxed font-light">{f.body}</p>
+              <span className="font-display text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+                {s.value}
+              </span>
+              <div className="mt-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-indigo-700 block font-display">
+                  {s.label}
+                </span>
+                <span className="text-[11px] text-slate-500 mt-0.5 block">{s.hint}</span>
               </div>
-              <div className="mt-6 pt-4 border-t border-white/5 flex items-center gap-2 text-xs font-medium text-sky-400">
-                <span>Enterprise Verified</span>
-                <CheckCircle2 className="h-3.5 w-3.5" />
-              </div>
-            </article>
+            </div>
           ))}
         </div>
       </section>
 
-      {/* Architecture & Privacy Blueprint Section */}
-      <section id="architecture" className="relative z-10 mx-auto max-w-7xl px-6 pb-28">
-        <div className="rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900/90 to-slate-950/90 p-8 sm:p-12 shadow-2xl backdrop-blur-xl">
-          <div className="grid gap-8 lg:grid-cols-12 items-center">
-            <div className="lg:col-span-6 space-y-6">
+      {/* Features Grid */}
+      <section id="features" className="relative z-10 mx-auto max-w-7xl px-6 py-16">
+        <div className="text-center max-w-2xl mx-auto space-y-3 mb-12">
+          <Badge tone="primary" size="md">
+            CORE CAPABILITIES
+          </Badge>
+          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 font-display">
+            Built for enterprise speed & zero compromise privacy
+          </h2>
+          <p className="text-sm text-slate-500">
+            A state-of-the-art attendance system engineered with on-device machine learning.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {features.map((f) => (
+            <div
+              key={f.title}
+              className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all hover:border-slate-300 space-y-4 flex flex-col justify-between"
+            >
+              <div className="space-y-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-600 shadow-xs">
+                  <f.icon className="h-5 w-5" />
+                </div>
+                <span className="text-xs font-semibold text-indigo-700 uppercase tracking-wider block font-display">
+                  {f.tag}
+                </span>
+                <h3 className="text-lg font-bold text-slate-900 font-display">{f.title}</h3>
+                <p className="text-xs text-slate-600 leading-relaxed font-light">{f.body}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Architecture Section */}
+      <section id="architecture" className="relative z-10 mx-auto max-w-7xl px-6 py-16">
+        <div className="rounded-3xl border border-slate-200 bg-white p-8 sm:p-12 shadow-md">
+          <div className="grid lg:grid-cols-12 gap-8 items-center">
+            <div className="lg:col-span-6 space-y-4">
               <Badge tone="success" size="md">
-                ZERO RAW IMAGE POLICY
+                PRIVACY ARCHITECTURE
               </Badge>
-              <h3 className="text-3xl font-extrabold text-white">
-                How Sentra guarantees employee biometric privacy.
-              </h3>
-              <p className="text-slate-300 leading-relaxed font-light">
-                Traditional attendance apps upload raw camera photos to cloud servers, introducing
-                massive data breach and identity theft liability. Sentra converts live optical
-                frames directly inside the browser's WebGL memory into non-reversible floating point
-                embeddings.
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 font-display">
+                How FaceTime Attendance preserves privacy
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-light">
+                Traditional attendance apps upload employee portrait photos to unsecure storage.
+                FaceTime Attendance eliminates this attack vector entirely:
               </p>
 
               <div className="space-y-3 pt-2">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold">
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold">
                     1
                   </div>
                   <div>
-                    <strong className="text-sm text-white block">Client-side Vectorization</strong>
-                    <span className="text-xs text-muted-foreground">
-                      Camera feed is processed in RAM and discarded immediately.
+                    <strong className="text-sm text-slate-900 block">On-Device Landmark Inference</strong>
+                    <span className="text-xs text-slate-500">
+                      Camera frames are processed in volatile WebAssembly memory and immediately discarded.
                     </span>
                   </div>
                 </div>
+
                 <div className="flex items-start gap-3">
-                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold">
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold">
                     2
                   </div>
                   <div>
-                    <strong className="text-sm text-white block">
-                      128-D Cryptographic Math Vector
-                    </strong>
-                    <span className="text-xs text-muted-foreground">
-                      Original faces cannot be reconstructed from normalized float arrays.
+                    <strong className="text-sm text-slate-900 block">128-D Mathematical Vector</strong>
+                    <span className="text-xs text-slate-500">
+                      Original human faces cannot be reverse-engineered from normalized vector floats.
                     </span>
                   </div>
                 </div>
+
                 <div className="flex items-start gap-3">
-                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold">
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold">
                     3
                   </div>
                   <div>
-                    <strong className="text-sm text-white block">PostgreSQL Cosine Matcher</strong>
-                    <span className="text-xs text-muted-foreground">
-                      Fast Euclidean/Cosine index lookups match identities in milliseconds.
+                    <strong className="text-sm text-slate-900 block">PostgreSQL pgvector Cosine Matcher</strong>
+                    <span className="text-xs text-slate-500">
+                      Sub-millisecond cosine distance indexing securely verifies enrolled staff.
                     </span>
                   </div>
                 </div>
@@ -474,12 +357,12 @@ function Landing() {
             </div>
 
             <div className="lg:col-span-6">
-              <div className="rounded-2xl border border-white/10 bg-slate-950 p-6 font-mono text-xs text-slate-300 space-y-3 shadow-inner">
-                <div className="flex items-center justify-between text-muted-foreground border-b border-white/10 pb-2">
-                  <span>VECTOR_SAMPLE_128D.json</span>
+              <div className="rounded-2xl border border-slate-200 bg-slate-950 p-6 font-mono text-xs text-slate-300 space-y-3 shadow-inner">
+                <div className="flex items-center justify-between text-slate-400 border-b border-slate-800 pb-2">
+                  <span>VECTOR_SCHEMA_128D.json</span>
                   <span className="text-emerald-400">IRREVERSIBLE</span>
                 </div>
-                <div className="text-sky-300 leading-relaxed overflow-x-auto p-2 bg-black/40 rounded-lg">
+                <div className="text-indigo-300 leading-relaxed overflow-x-auto p-3 bg-slate-900 rounded-lg">
                   <code>
                     {"{\n"}
                     {'  "employee_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",\n'}
@@ -489,8 +372,9 @@ function Landing() {
                     {"}"}
                   </code>
                 </div>
-                <p className="text-[11px] text-muted-foreground pt-1">
-                  ✓ GDPR & CCPA biometric compliance compliant: mathematically one-way.
+                <p className="text-[11px] text-slate-400 pt-1 flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                  GDPR & CCPA biometric compliant: mathematically one-way.
                 </p>
               </div>
             </div>
@@ -500,21 +384,23 @@ function Landing() {
 
       {/* CTA Final Card */}
       <section className="relative z-10 mx-auto max-w-7xl px-6 pb-24 text-center">
-        <div className="relative rounded-3xl border border-sky-400/30 bg-gradient-to-r from-sky-950/80 via-slate-900/90 to-cyan-950/80 p-12 shadow-2xl backdrop-blur-xl overflow-hidden">
+        <div className="relative rounded-3xl border border-indigo-200 bg-gradient-to-br from-indigo-600 to-indigo-800 p-12 shadow-xl text-white overflow-hidden">
           <div className="relative z-10 max-w-3xl mx-auto space-y-6">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white font-display">
               Ready to upgrade your organization's attendance?
             </h2>
-            <p className="text-slate-300 text-base leading-relaxed font-light">
+            <p className="text-indigo-100 text-base leading-relaxed font-light">
               Start managing employees and deploying attendance kiosks across your facilities with
-              military-grade accuracy and total privacy.
+              high accuracy and total privacy.
             </p>
             <div className="flex flex-wrap justify-center gap-4 pt-4">
               <Link to="/auth" search={{ next: "/console" }}>
-                <Button size="lg">Open Console</Button>
+                <Button size="lg" className="bg-white text-indigo-900 hover:bg-slate-100 border-white">
+                  Open Console
+                </Button>
               </Link>
               <Link to="/kiosk">
-                <Button size="lg" variant="outline">
+                <Button size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/10 hover:text-white">
                   Launch Attendance Kiosk
                 </Button>
               </Link>
@@ -524,21 +410,21 @@ function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 bg-slate-950 py-10 text-xs text-muted-foreground">
+      <footer className="border-t border-slate-200 bg-white py-8 text-xs text-slate-500">
         <div className="mx-auto max-w-7xl px-6 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <ScanFace className="h-4 w-4 text-sky-400" />
-            <span className="font-display font-semibold text-white">
-              Sentra Biometric Technologies
+            <Logo size="sm" showText={false} />
+            <span className="font-display font-semibold text-slate-900">
+              FaceTime Attendance Technologies
             </span>
             <span>© {new Date().getFullYear()}</span>
           </div>
           <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1.5 text-emerald-400">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping-slow" />
+            <span className="flex items-center gap-1.5 text-emerald-700">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
               All Systems Operational
             </span>
-            <span>Privacy-First</span>
+            <span>Zero-Photo Architecture</span>
             <span>pgvector Engine</span>
           </div>
         </div>

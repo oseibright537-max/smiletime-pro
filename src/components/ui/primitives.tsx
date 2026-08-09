@@ -1,5 +1,5 @@
 import React, { type ReactNode } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronDown } from "lucide-react";
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "outline" | "ghost" | "danger" | "emerald";
@@ -24,16 +24,16 @@ export function Button({
 
   const variants = {
     primary:
-      "bg-gradient-to-r from-sky-400 to-cyan-300 text-slate-950 font-semibold shadow-lg shadow-sky-500/20 hover:shadow-sky-500/30 hover:brightness-105 border border-sky-300/30",
+      "bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-sm hover:shadow border border-indigo-600",
     secondary:
-      "bg-secondary/80 hover:bg-secondary text-foreground border border-white/10 hover:border-white/20 shadow-sm",
+      "bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 shadow-sm",
     outline:
-      "border border-white/12 bg-surface/50 text-foreground hover:bg-surface-hover hover:border-sky-400/40 hover:text-white backdrop-blur-md shadow-sm",
-    ghost: "text-muted-foreground hover:text-foreground hover:bg-white/5",
+      "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900 shadow-sm",
+    ghost: "text-slate-600 hover:text-slate-900 hover:bg-slate-100",
     danger:
-      "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-md shadow-destructive/20 border border-destructive/30",
+      "bg-rose-600 text-white hover:bg-rose-700 shadow-sm border border-rose-600",
     emerald:
-      "bg-gradient-to-r from-emerald-400 to-teal-300 text-slate-950 font-semibold shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 hover:brightness-105 border border-emerald-300/30",
+      "bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm hover:shadow border border-emerald-600",
   } as const;
 
   const sizes = {
@@ -59,7 +59,7 @@ export function Button({
 export function Input({ className = "", ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
-      className={`h-10.5 w-full rounded-xl border border-white/10 bg-slate-950/60 px-3.5 text-sm text-foreground placeholder:text-muted-foreground/60 transition-all duration-200 hover:border-white/20 focus:border-sky-400 focus:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-sky-400/20 disabled:opacity-50 ${className}`}
+      className={`h-10.5 w-full rounded-xl border border-slate-300 bg-white px-3.5 text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-200 hover:border-slate-400 focus:border-indigo-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600/20 disabled:opacity-50 ${className}`}
       {...props}
     />
   );
@@ -73,13 +73,13 @@ export function Select({
   return (
     <div className="relative w-full">
       <select
-        className={`h-10.5 w-full appearance-none rounded-xl border border-white/10 bg-slate-950/60 px-3.5 pr-8 text-sm text-foreground transition-all duration-200 hover:border-white/20 focus:border-sky-400 focus:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-sky-400/20 disabled:opacity-50 ${className}`}
+        className={`h-10.5 w-full appearance-none rounded-xl border border-slate-300 bg-white px-3.5 pr-8 text-sm text-slate-900 transition-all duration-200 hover:border-slate-400 focus:border-indigo-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600/20 disabled:opacity-50 ${className}`}
         {...props}
       >
         {children}
       </select>
-      <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">
-        ▼
+      <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+        <ChevronDown className="h-4 w-4" />
       </div>
     </div>
   );
@@ -99,13 +99,13 @@ export function Field({
   return (
     <label className="block space-y-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 font-display">
+        <span className="text-xs font-semibold uppercase tracking-wider text-slate-600 font-display">
           {label}
         </span>
-        {hint && <span className="text-[11px] text-muted-foreground">{hint}</span>}
+        {hint && <span className="text-[11px] text-slate-400">{hint}</span>}
       </div>
       {children}
-      {error && <p className="text-xs text-destructive font-medium">{error}</p>}
+      {error && <p className="text-xs text-rose-600 font-medium">{error}</p>}
     </label>
   );
 }
@@ -138,21 +138,21 @@ export function Badge({
   size?: "sm" | "md";
 }) {
   const tones = {
-    muted: "bg-slate-800/70 text-slate-300 border-slate-700/60",
-    neutral: "bg-white/5 text-slate-300 border-white/10",
-    success: "bg-emerald-500/10 text-emerald-400 border-emerald-500/25",
-    warning: "bg-amber-500/10 text-amber-300 border-amber-500/25",
-    primary: "bg-sky-500/10 text-sky-400 border-sky-500/25",
-    danger: "bg-rose-500/10 text-rose-400 border-rose-500/25",
+    muted: "bg-slate-100 text-slate-700 border-slate-200",
+    neutral: "bg-slate-100 text-slate-700 border-slate-200",
+    success: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    warning: "bg-amber-50 text-amber-800 border-amber-200",
+    primary: "bg-indigo-50 text-indigo-700 border-indigo-200",
+    danger: "bg-rose-50 text-rose-700 border-rose-200",
   } as const;
 
   const dotTones = {
     muted: "bg-slate-400",
     neutral: "bg-slate-400",
-    success: "bg-emerald-400",
-    warning: "bg-amber-400",
-    primary: "bg-sky-400",
-    danger: "bg-rose-400",
+    success: "bg-emerald-500",
+    warning: "bg-amber-500",
+    primary: "bg-indigo-500",
+    danger: "bg-rose-500",
   } as const;
 
   const sizeStyles = {
@@ -162,7 +162,7 @@ export function Badge({
 
   return (
     <span
-      className={`inline-flex items-center rounded-full font-medium border backdrop-blur-sm ${tones[tone]} ${sizeStyles[size]}`}
+      className={`inline-flex items-center rounded-full font-medium border ${tones[tone]} ${sizeStyles[size]}`}
     >
       {pulse && (
         <span className="relative flex h-2 w-2">
@@ -195,7 +195,7 @@ export function Avatar({ name, size = "md" }: { name: string; size?: "sm" | "md"
 
   return (
     <div
-      className={`${sizeClasses[size]} rounded-full bg-gradient-to-br from-slate-700 to-slate-900 border border-white/15 flex items-center justify-center font-display font-semibold text-sky-300 shadow-inner`}
+      className={`${sizeClasses[size]} rounded-full bg-gradient-to-br from-indigo-500 to-indigo-700 border border-indigo-200 flex items-center justify-center font-display font-semibold text-white shadow-sm`}
     >
       {initials}
     </div>
