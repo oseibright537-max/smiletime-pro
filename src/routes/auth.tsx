@@ -1,22 +1,21 @@
 import { createFileRoute, useNavigate, useSearch, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
-  ScanFace,
   ShieldCheck,
-  Lock,
-  Mail,
-  KeyRound,
   CheckCircle2,
   Eye,
   EyeOff,
   ArrowLeft,
+  KeyRound,
+  Mail,
   User,
-  AlertCircle,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button, Field, Input, Panel } from "@/components/ui/primitives";
 import { Logo } from "@/components/ui/logo";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -39,6 +38,7 @@ type AuthMode = "signin" | "signup" | "forgot";
 function AuthPage() {
   const navigate = useNavigate();
   const { next } = useSearch({ from: "/auth" });
+  const { user } = useAuth();
   const [mode, setMode] = useState<AuthMode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,10 +50,10 @@ function AuthPage() {
   const target = next && next.startsWith("/") ? next : "/console";
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: target });
-    });
-  }, [navigate, target]);
+    if (user) {
+      navigate({ to: target });
+    }
+  }, [user, navigate, target]);
 
   // Handle Form Submit
   async function submit(e: React.FormEvent) {
@@ -69,51 +69,58 @@ function AuthPage() {
         });
         if (error) throw error;
         setResetSent(true);
-        toast.success("Password reset email sent! Check your inbox.");
+        toast.success("Password recovery link sent! Check your inbox.");
       } else if (mode === "signup") {
         const { data, error } = await supabase.auth.signUp({
           email: cleanEmail,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/auth`,
-            data: { full_name: fullName.trim() },
+            data: { full_name: fullName.trim() || cleanEmail },
           },
         });
         if (error) throw error;
 
-        if (data?.session) {
-          toast.success("Account created successfully! Welcome to FaceTime Attendance.");
-          navigate({ to: target });
-        } else if (data?.user && data.user.identities && data.user.identities.length === 0) {
-          toast.error("This email is already registered. Please sign in or use forgot password.");
+        // If email already exists in Supabase, identities array is empty
+        if (data?.user && data.user.identities && data.user.identities.length === 0) {
+          toast.info("This email is already registered. Please sign in below.");
           setMode("signin");
+        } else if (data?.session) {
+          toast.success("Account registered! Welcome to FaceTime Attendance.");
+          navigate({ to: target });
         } else {
-          toast.success("Registration received! Please check your email to activate your account.");
+          toast.success("Account created! Please check your email to activate your account or sign in.");
           setMode("signin");
         }
       } else {
+        // Sign In
         const { data, error } = await supabase.auth.signInWithPassword({
           email: cleanEmail,
           password,
         });
 
         if (error) {
-          if (error.message.toLowerCase().includes("email not confirmed")) {
-            throw new Error("Your email address is not confirmed yet. Please check your email inbox for the activation link.");
+          const msg = error.message.toLowerCase();
+          if (msg.includes("email not confirmed")) {
+            throw new Error(
+              "Your email has not been confirmed yet. Please check your email inbox for the activation link.",
+            );
           }
-          if (error.message.toLowerCase().includes("invalid login credentials")) {
-            throw new Error("Incorrect email or password. Please re-check your credentials or click 'Forgot password?'.");
+          if (msg.includes("invalid login credentials")) {
+            throw new Error(
+              "Incorrect email or password. If you forgot your password, click 'Forgot password?'.",
+            );
           }
           throw error;
         }
 
         if (data.session) {
-          toast.success("Welcome back to FaceTime Attendance");
+          toast.success("Signed in successfully");
           navigate({ to: target });
         }
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Authentication failed");
+      toast.error(err instanceof Error ? err.message : "Authentication error occurred");
     } finally {
       setBusy(false);
     }
@@ -137,7 +144,7 @@ function AuthPage() {
               <button
                 type="button"
                 onClick={() => setMode("signin")}
-                className={`rounded-lg py-2 text-xs font-semibold transition-all cursor-pointer ${
+                className={`rounded-lg py-2.5 text-xs font-bold transition-all cursor-pointer ${
                   mode === "signin"
                     ? "bg-white text-slate-900 shadow-sm"
                     : "text-slate-600 hover:text-slate-900"
@@ -148,7 +155,7 @@ function AuthPage() {
               <button
                 type="button"
                 onClick={() => setMode("signup")}
-                className={`rounded-lg py-2 text-xs font-semibold transition-all cursor-pointer ${
+                className={`rounded-lg py-2.5 text-xs font-bold transition-all cursor-pointer ${
                   mode === "signup"
                     ? "bg-white text-slate-900 shadow-sm"
                     : "text-slate-600 hover:text-slate-900"
@@ -273,12 +280,12 @@ function AuthPage() {
                 </div>
               )}
 
-              <Button type="submit" size="lg" className="w-full mt-3" loading={busy}>
+              <Button type="submit" size="lg" className="w-full mt-3 font-bold" loading={busy}>
                 {mode === "signin"
                   ? "Sign In to Console"
                   : mode === "signup"
-                    ? "Create Account"
-                    : "Send Reset Link"}
+                    ? "Create Workspace Account"
+                    : "Send Recovery Link"}
               </Button>
 
               {mode === "forgot" && (
