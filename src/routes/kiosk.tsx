@@ -59,13 +59,14 @@ function Kiosk() {
   const { user, loading } = useAuth();
   const { videoRef, start, stop, active, error } = useCamera();
   const [modelsReady, setModelsReady] = useState(false);
-  const [kind, setKind] = useState<Kind>("check_in");
   const [phase, setPhase] = useState<Phase>("idle");
   const [hint, setHint] = useState("Position your face inside the viewfinder to begin");
   const [time, setTime] = useState("");
   const [result, setResult] = useState<{
     ok: boolean;
     name?: string;
+    kind?: Kind;
+    status?: string;
     message: string;
     confidence?: number;
     liveness?: number;
@@ -75,8 +76,7 @@ function Kiosk() {
   const probeRef = useRef<{ descriptor: Float32Array; score: number }[]>([]);
   const busyRef = useRef(false);
   const loopRef = useRef(false);
-  const kindRef = useRef<Kind>(kind);
-  kindRef.current = kind;
+
 
   // Live Digital Clock
   useEffect(() => {
