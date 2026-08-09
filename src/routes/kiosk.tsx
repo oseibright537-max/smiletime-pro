@@ -401,39 +401,33 @@ function Kiosk() {
                       LIVENESS: {Math.round((result.liveness ?? 0) * 100)}%
                     </Badge>
                     <Badge tone="muted" size="md">
-                      {KIND_LABELS[kindRef.current].label.toUpperCase()}
+                      {(result.kind ? KIND_LABELS[result.kind].label : "EVENT").toUpperCase()}
                     </Badge>
+                    {result.status === "late" && (
+                      <Badge tone="warning" size="md">
+                        LATE
+                      </Badge>
+                    )}
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          {/* Bottom Event Selector Bar */}
+          {/* Bottom Status Bar */}
           <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/10 bg-slate-900/80 px-6 py-4">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
                 MODE:
               </span>
-              <div className="flex flex-wrap gap-1.5">
-                {(Object.keys(KIND_LABELS) as Kind[]).map((k) => {
-                  const isActive = kind === k;
-                  return (
-                    <button
-                      key={k}
-                      onClick={() => setKind(k)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${
-                        isActive
-                          ? "bg-sky-400 text-slate-950 shadow-md shadow-sky-500/20"
-                          : "bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white border border-white/5"
-                      }`}
-                    >
-                      {KIND_LABELS[k].label}
-                    </button>
-                  );
-                })}
-              </div>
+              <Badge tone="primary" size="sm">
+                AUTOMATIC · {expectedAction}
+              </Badge>
+              <span className="text-[11px] text-muted-foreground">
+                Working hours 8:00 AM – 5:00 PM · Late after 9:30 AM · Check-out from 4:55 PM
+              </span>
             </div>
+
 
             {active && (
               <Button variant="outline" size="sm" onClick={stop}>
