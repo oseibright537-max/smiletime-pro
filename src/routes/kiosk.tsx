@@ -59,13 +59,14 @@ function Kiosk() {
   const { user, loading } = useAuth();
   const { videoRef, start, stop, active, error } = useCamera();
   const [modelsReady, setModelsReady] = useState(false);
-  const [kind, setKind] = useState<Kind>("check_in");
   const [phase, setPhase] = useState<Phase>("idle");
   const [hint, setHint] = useState("Position your face inside the viewfinder to begin");
   const [time, setTime] = useState("");
   const [result, setResult] = useState<{
     ok: boolean;
     name?: string;
+    kind?: Kind;
+    status?: string;
     message: string;
     confidence?: number;
     liveness?: number;
@@ -75,8 +76,13 @@ function Kiosk() {
   const probeRef = useRef<{ descriptor: Float32Array; score: number }[]>([]);
   const busyRef = useRef(false);
   const loopRef = useRef(false);
-  const kindRef = useRef<Kind>(kind);
-  kindRef.current = kind;
+
+  // Recomputed each second with the clock: the kiosk decides the action itself.
+  const nowLocal = new Date();
+  const minutesOfDay = nowLocal.getHours() * 60 + nowLocal.getMinutes();
+  const expectedAction = minutesOfDay >= 16 * 60 + 55 ? "CHECK OUT" : "CHECK IN";
+
+
 
   // Live Digital Clock
   useEffect(() => {
@@ -131,48 +137,42 @@ function Kiosk() {
         return;
       }
 
-      const since = new Date(Date.now() - DUPLICATE_WINDOW_MS).toISOString();
-      const { data: recent } = await supabase
-        .from("attendance_events")
-        .select("id")
-        .eq("employee_id", match.employee_id)
-        .eq("kind", kindRef.current)
-        .gte("occurred_at", since)
-        .limit(1);
-
-      if (recent && recent.length > 0) {
-        finish({
-          ok: false,
-          name: match.full_name,
-          message: `${match.full_name} already logged a ${kindRef.current.replace("_", " ")} within the last minute.`,
-        });
-        return;
-      }
-
       const confidence = Math.max(0, 1 - match.distance / MATCH_THRESHOLD) * 0.4 + 0.6;
-      const { error: insertError } = await supabase.from("attendance_events").insert({
-        employee_id: match.employee_id,
-        kind: kindRef.current,
-        confidence,
-        liveness_score: livenessScore,
-        device_label: "Sentra Kiosk Station",
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+      const { data: logged, error: logError } = await supabase.rpc("log_attendance", {
+        _employee_id: match.employee_id,
+        _confidence: confidence,
+        _liveness: livenessScore,
+        _device_label: "Sentra Kiosk Station",
+        _tz: tz,
       });
 
-      if (insertError) {
-        finish({ ok: false, message: insertError.message });
+      if (logError) {
+        finish({ ok: false, name: match.full_name, message: logError.message });
         return;
       }
 
+      const event = logged?.[0];
+      const kindLogged = (event?.kind ?? "check_in") as Kind;
       finish({
         ok: true,
         name: match.full_name,
-        message: `${kindRef.current.replace("_", " ")} successfully recorded.`,
+        kind: kindLogged,
+        status: event?.status ?? "normal",
+        message:
+          `${KIND_LABELS[kindLogged].label} recorded` +
+          (event?.status === "late"
+            ? " — marked Late (after 9:30 AM)."
+            : event?.status === "early_leave"
+              ? " — early leave (before 5:00 PM)."
+              : "."),
         confidence,
         liveness: livenessScore,
       });
     },
     [finish],
   );
+
 
   // Recognition + liveness loop
   useEffect(() => {
@@ -407,39 +407,33 @@ function Kiosk() {
                       LIVENESS: {Math.round((result.liveness ?? 0) * 100)}%
                     </Badge>
                     <Badge tone="muted" size="md">
-                      {KIND_LABELS[kindRef.current].label.toUpperCase()}
+                      {(result.kind ? KIND_LABELS[result.kind].label : "EVENT").toUpperCase()}
                     </Badge>
+                    {result.status === "late" && (
+                      <Badge tone="warning" size="md">
+                        LATE
+                      </Badge>
+                    )}
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          {/* Bottom Event Selector Bar */}
+          {/* Bottom Status Bar */}
           <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/10 bg-slate-900/80 px-6 py-4">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
                 MODE:
               </span>
-              <div className="flex flex-wrap gap-1.5">
-                {(Object.keys(KIND_LABELS) as Kind[]).map((k) => {
-                  const isActive = kind === k;
-                  return (
-                    <button
-                      key={k}
-                      onClick={() => setKind(k)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${
-                        isActive
-                          ? "bg-sky-400 text-slate-950 shadow-md shadow-sky-500/20"
-                          : "bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white border border-white/5"
-                      }`}
-                    >
-                      {KIND_LABELS[k].label}
-                    </button>
-                  );
-                })}
-              </div>
+              <Badge tone="primary" size="sm">
+                AUTOMATIC · {expectedAction}
+              </Badge>
+              <span className="text-[11px] text-muted-foreground">
+                Working hours 8:00 AM – 5:00 PM · Late after 9:30 AM · Check-out from 4:55 PM
+              </span>
             </div>
+
 
             {active && (
               <Button variant="outline" size="sm" onClick={stop}>
