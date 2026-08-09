@@ -170,7 +170,7 @@ function Overview() {
           hint={`${attendanceRate}% of workforce checked in`}
           icon={CheckCircle2}
           tone="success"
-          trend={attendanceRate > 0 ? `${attendanceRate}%` : undefined}
+          {...(attendanceRate > 0 ? { trend: `${attendanceRate}%` } : {})}
         />
         <StatCard
           label="Active Employees"
