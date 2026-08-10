@@ -6,6 +6,7 @@ import { Badge, Button } from "@/components/ui/primitives";
 import { Logo } from "@/components/ui/logo";
 
 export const Route = createFileRoute("/console")({
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Console — FaceTime Attendance" },
