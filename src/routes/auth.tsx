@@ -60,6 +60,8 @@ function AuthPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
+    setFormError(null);
+
 
     const cleanEmail = email.trim().toLowerCase();
 
