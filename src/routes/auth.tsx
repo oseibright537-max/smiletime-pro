@@ -123,7 +123,9 @@ function AuthPage() {
         }
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Authentication error occurred");
+      const message = err instanceof Error ? err.message : "Authentication error occurred";
+      setFormError(message);
+      toast.error(message);
     } finally {
       setBusy(false);
     }
