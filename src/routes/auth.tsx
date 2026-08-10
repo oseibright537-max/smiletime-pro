@@ -46,6 +46,7 @@ function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const target = next && next.startsWith("/") ? next : "/console";
 
@@ -59,6 +60,8 @@ function AuthPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
+    setFormError(null);
+
 
     const cleanEmail = email.trim().toLowerCase();
 
@@ -120,7 +123,9 @@ function AuthPage() {
         }
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Authentication error occurred");
+      const message = err instanceof Error ? err.message : "Authentication error occurred";
+      setFormError(message);
+      toast.error(message);
     } finally {
       setBusy(false);
     }
@@ -212,6 +217,14 @@ function AuthPage() {
             </div>
           ) : (
             <form className="space-y-4" onSubmit={submit}>
+              {formError && (
+                <div
+                  role="alert"
+                  className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs font-medium text-rose-700"
+                >
+                  {formError}
+                </div>
+              )}
               {mode === "signup" && (
                 <Field label="Full Name">
                   <Input
