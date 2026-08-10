@@ -46,6 +46,7 @@ function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const target = next && next.startsWith("/") ? next : "/console";
 
