@@ -217,6 +217,14 @@ function AuthPage() {
             </div>
           ) : (
             <form className="space-y-4" onSubmit={submit}>
+              {formError && (
+                <div
+                  role="alert"
+                  className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs font-medium text-rose-700"
+                >
+                  {formError}
+                </div>
+              )}
               {mode === "signup" && (
                 <Field label="Full Name">
                   <Input
