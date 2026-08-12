@@ -90,6 +90,8 @@ export function useAuth() {
   const [loading, setLoading] = useState<boolean>(!globalLoaded);
 
   useEffect(() => {
+    initAuth();
+
     const update = () => {
       setSession(globalSession);
       setUser(globalUser);
