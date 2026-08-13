@@ -242,11 +242,26 @@ RETURNS TABLE (
     (fe.embedding <=> probe)::numeric AS distance
   FROM public.face_embeddings fe
   JOIN public.employees e ON e.id = fe.employee_id
-  WHERE e.status = 'active'
-    AND (_org_id IS NULL OR fe.organization_id = _org_id OR e.organization_id = _org_id)
+  WHERE (e.status IS NULL OR e.status = 'active')
+    AND (_org_id IS NULL OR fe.organization_id = _org_id OR fe.organization_id IS NULL)
+    AND (_org_id IS NULL OR e.organization_id = _org_id OR e.organization_id IS NULL)
     AND (fe.embedding <=> probe) <= max_distance
   ORDER BY fe.embedding <=> probe ASC
   LIMIT 1;
+$$;
+
+CREATE OR REPLACE FUNCTION public.match_face(
+  probe text,
+  _org_id uuid DEFAULT NULL,
+  max_distance numeric DEFAULT 0.52
+)
+RETURNS TABLE (
+  employee_id uuid,
+  employee_code text,
+  full_name text,
+  distance numeric
+) LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT * FROM public.match_face(probe::vector(128), _org_id, max_distance);
 $$;
 
 -- 10. ATTENDANCE EVENTS (Scoped per Organization)
@@ -340,5 +355,4 @@ GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.match_face(text, uuid, double precision) TO anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.user_belongs_to_org(uuid) TO anon, authenticated, service_role;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated, service_role;
