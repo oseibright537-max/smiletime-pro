@@ -34,11 +34,12 @@ import { downloadCsvBlob } from "@/lib/export/downloader";
 interface BulkEnrollmentModalProps {
   isOpen: boolean;
   onClose: () => void;
+  organizationId?: string;
 }
 
 type WizardStep = "upload" | "mapping" | "preview" | "result";
 
-export function BulkEnrollmentModal({ isOpen, onClose }: BulkEnrollmentModalProps) {
+export function BulkEnrollmentModal({ isOpen, onClose, organizationId }: BulkEnrollmentModalProps) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -108,8 +109,8 @@ export function BulkEnrollmentModal({ isOpen, onClose }: BulkEnrollmentModalProp
       const detected = autoDetectColumnMapping(headers);
       setColumnMapping(detected);
 
-      // Auto-reconcile
-      const previewData = await reconcileRosterWithDatabase(rows, detected);
+      // Auto-reconcile with tenant scope
+      const previewData = await reconcileRosterWithDatabase(rows, detected, organizationId);
       setPreview(previewData);
       setStep("mapping");
     } catch (err) {
@@ -131,7 +132,7 @@ export function BulkEnrollmentModal({ isOpen, onClose }: BulkEnrollmentModalProp
     if (!rawRows.length) return;
     setLoading(true);
     try {
-      const previewData = await reconcileRosterWithDatabase(rawRows, columnMapping);
+      const previewData = await reconcileRosterWithDatabase(rawRows, columnMapping, organizationId);
       setPreview(previewData);
       setStep("preview");
     } catch (err) {
@@ -146,7 +147,7 @@ export function BulkEnrollmentModal({ isOpen, onClose }: BulkEnrollmentModalProp
     if (!preview || !preview.rows.length) return;
     setLoading(true);
     try {
-      const res = await executeBulkRosterIngestion(preview.rows, strategy);
+      const res = await executeBulkRosterIngestion(preview.rows, strategy, organizationId);
       setIngestResult(res);
       setStep("result");
 

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ShieldAlert,
   Trash2,
@@ -13,19 +13,21 @@ import {
   Settings,
   Mail,
   Building,
+  Save,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useOrganization } from "@/hooks/useOrganization";
 import { Badge, Button, Field, Input, Panel } from "@/components/ui/primitives";
 
 export const Route = createFileRoute("/console/settings")({
   head: () => ({
     meta: [
-      { title: "Settings & Security — FaceTime Attendance" },
+      { title: "Company Settings & Security — FaceTime Attendance" },
       {
         name: "description",
-        content: "Manage organization settings, security preferences, and account deletion.",
+        content: "Manage company settings, multi-tenant preferences, and security lifecycle.",
       },
     ],
   }),
@@ -34,11 +36,45 @@ export const Route = createFileRoute("/console/settings")({
 
 function SettingsPage() {
   const { user, roles, signOut } = useAuth();
+  const { currentOrg, currentOrgId, refetch: refetchOrg } = useOrganization();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
+  const [companyName, setCompanyName] = useState(currentOrg?.name || "");
   const [newPassword, setNewPassword] = useState("");
   const [confirmDeleteText, setConfirmDeleteText] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  useEffect(() => {
+    if (currentOrg?.name) {
+      setCompanyName(currentOrg.name);
+    }
+  }, [currentOrg]);
+
+  // Update Company Name
+  const handleUpdateCompanyName = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentOrgId) return;
+    const trimmed = companyName.trim();
+    if (trimmed.length < 2) {
+      toast.error("Company name must be at least 2 characters.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const { error } = await supabase
+        .from("organizations")
+        .update({ name: trimmed })
+        .eq("id", currentOrgId);
+
+      if (error) throw error;
+      toast.success("Company name updated successfully!");
+      void refetchOrg();
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   // Update Password
   const handleUpdatePassword = async (e: React.FormEvent) => {
@@ -60,14 +96,18 @@ function SettingsPage() {
     }
   };
 
-  // Reset All Attendance Logs
+  // Reset All Attendance Logs for active company
   const handleClearLogs = async () => {
-    if (!confirm("Are you sure you want to clear all past attendance clock-in events?")) return;
+    if (!confirm(`Are you sure you want to clear all past attendance clock-in events for ${currentOrg?.name || "this company"}?`)) return;
     setBusy(true);
     try {
-      const { error } = await supabase.from("attendance_events").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      let query = supabase.from("attendance_events").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      if (currentOrgId) {
+        query = query.eq("organization_id", currentOrgId);
+      }
+      const { error } = await query;
       if (error) throw error;
-      toast.success("All attendance records have been cleared.");
+      toast.success("Attendance records for this company have been cleared.");
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -75,14 +115,18 @@ function SettingsPage() {
     }
   };
 
-  // Wipe All Face Embeddings
+  // Wipe All Face Embeddings for active company
   const handleWipeEmbeddings = async () => {
-    if (!confirm("Warning: This will delete ALL enrolled face vectors. Employees will need to re-enroll. Continue?")) return;
+    if (!confirm(`Warning: This will delete ALL enrolled face vectors for ${currentOrg?.name || "this company"}. Employees will need to re-enroll. Continue?`)) return;
     setBusy(true);
     try {
-      const { error } = await supabase.from("face_embeddings").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      let query = supabase.from("face_embeddings").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      if (currentOrgId) {
+        query = query.eq("organization_id", currentOrgId);
+      }
+      const { error } = await query;
       if (error) throw error;
-      toast.success("All biometric face vectors have been cleared.");
+      toast.success("All biometric face vectors for this company have been cleared.");
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -113,19 +157,63 @@ function SettingsPage() {
   };
 
   return (
-    <div className="space-y-8 max-w-4xl">
+    <div className="space-y-6 sm:space-y-8 max-w-4xl">
       {/* Header */}
       <div className="pb-4 border-b border-slate-200">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 font-display">
-          Workspace Settings & Security
+          Company Settings & Security
         </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Manage administrator security, biometric policies, data retention, and account lifecycle.
+        <p className="mt-1 text-xs sm:text-sm text-slate-500">
+          Manage company workspace details, biometric policies, shift windows, and security lifecycle.
         </p>
       </div>
 
-      {/* Account Profile Card */}
-      <Panel className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 space-y-6">
+      {/* Company / Tenant Profile Card */}
+      {currentOrg && (
+        <Panel className="bg-white border border-slate-200 shadow-sm rounded-2xl p-4 sm:p-6 space-y-5">
+          <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+            <div className="h-10 w-10 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600">
+              <Building className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900 font-display">Company Workspace</h2>
+              <span className="text-xs text-slate-500">Multi-tenant enterprise account details</span>
+            </div>
+          </div>
+
+          <form onSubmit={handleUpdateCompanyName} className="space-y-4">
+            <div className="grid sm:grid-cols-2 gap-4 text-xs">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wider text-slate-600 font-display">
+                  Company / Organization Name
+                </label>
+                <Input
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="Acme Corporation"
+                  required
+                />
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                <span className="text-slate-500 font-medium block">Tenant ID (UUID)</span>
+                <span className="font-mono text-slate-700 text-xs block truncate select-all">
+                  {currentOrg.id}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-1">
+              <Button type="submit" size="sm" loading={busy} icon={<Save className="h-3.5 w-3.5" />}>
+                Save Company Name
+              </Button>
+            </div>
+          </form>
+        </Panel>
+      )}
+
+      {/* Administrator Profile Card */}
+      <Panel className="bg-white border border-slate-200 shadow-sm rounded-2xl p-4 sm:p-6 space-y-6">
         <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
           <div className="h-10 w-10 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600">
             <User className="h-5 w-5" />
@@ -159,7 +247,7 @@ function SettingsPage() {
             <KeyRound className="h-4 w-4 text-indigo-600" />
             Update Password
           </h3>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <Input
               type="password"
               placeholder="Enter new password (min 6 chars)"
@@ -176,23 +264,23 @@ function SettingsPage() {
       </Panel>
 
       {/* Biometric & System Retention Card */}
-      <Panel className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 space-y-6">
+      <Panel className="bg-white border border-slate-200 shadow-sm rounded-2xl p-4 sm:p-6 space-y-6">
         <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
           <div className="h-10 w-10 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600">
             <Sliders className="h-5 w-5" />
           </div>
           <div>
             <h2 className="text-base font-bold text-slate-900 font-display">Data Management & Maintenance</h2>
-            <span className="text-xs text-slate-500">Purge past telemetry or reset workforce face templates</span>
+            <span className="text-xs text-slate-500">Purge telemetry or reset biometric face templates for {currentOrg?.name || "this company"}</span>
           </div>
         </div>
 
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Clear Attendance Log History</h3>
+              <h3 className="text-sm font-bold text-slate-900">Clear Attendance Logs</h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Deletes all past clock-in and clock-out logs. Employee directory remains intact.
+                Deletes all past clock-in and clock-out logs for this company. Employee directory remains intact.
               </p>
             </div>
             <Button
@@ -200,17 +288,18 @@ function SettingsPage() {
               size="sm"
               onClick={handleClearLogs}
               loading={busy}
-              icon={<RotateCcw className="h-3.5 w-3.5 text-slate-600" />}
+              icon={<RotateCcw className="h-3.5 w-3.5 text-amber-600" />}
+              className="w-full justify-center"
             >
-              Clear Attendance Logs
+              Clear Company Logs
             </Button>
           </div>
 
-          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
+          <div className="p-4 rounded-xl border border-rose-200 bg-rose-50/50 space-y-3">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Wipe All Face Vectors</h3>
+              <h3 className="text-sm font-bold text-slate-900">Reset Face Templates</h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Deletes all mathematical facial templates. All staff will need to re-enroll.
+                Wipes all enrolled neural vector embeddings for this company. Employees will need to re-enroll.
               </p>
             </div>
             <Button
@@ -218,79 +307,74 @@ function SettingsPage() {
               size="sm"
               onClick={handleWipeEmbeddings}
               loading={busy}
-              icon={<Trash2 className="h-3.5 w-3.5 text-amber-600" />}
+              icon={<Trash2 className="h-3.5 w-3.5 text-rose-600" />}
+              className="w-full justify-center text-rose-700 hover:bg-rose-100"
             >
-              Wipe Face Embeddings
+              Wipe Biometric Vectors
             </Button>
           </div>
         </div>
       </Panel>
 
       {/* Danger Zone: Account Deletion */}
-      <Panel className="bg-rose-50/50 border border-rose-200 shadow-sm rounded-2xl p-6 space-y-6">
-        <div className="flex items-center gap-3 pb-4 border-b border-rose-200">
-          <div className="h-10 w-10 rounded-xl bg-rose-100 border border-rose-300 flex items-center justify-center text-rose-700">
+      <Panel className="border border-rose-200 bg-rose-50/30 shadow-sm rounded-2xl p-4 sm:p-6 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-600">
             <AlertTriangle className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-rose-900 font-display">Danger Zone</h2>
-            <span className="text-xs text-rose-700">Permanent and irreversible workspace actions</span>
+            <h2 className="text-base font-bold text-rose-950 font-display">Danger Zone</h2>
+            <span className="text-xs text-rose-700">Irreversible account deletion actions</span>
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900">Delete Administrator Account</h3>
-            <p className="text-xs text-slate-600 mt-1 max-w-xl leading-relaxed">
-              Once you delete your account, your administrator session, security profile, and roles
-              will be permanently removed. You will be logged out immediately.
+        <p className="text-xs text-slate-600 leading-relaxed">
+          Deleting your administrator account will remove your login credentials, role assignments, and unlink your profile.
+        </p>
+
+        {!showDeleteModal ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowDeleteModal(true)}
+            className="text-rose-700 hover:bg-rose-100"
+          >
+            Delete Administrator Account
+          </Button>
+        ) : (
+          <div className="space-y-3 p-4 rounded-xl bg-white border border-rose-300">
+            <p className="text-xs font-semibold text-rose-900">
+              Type <span className="font-mono font-bold">DELETE MY ACCOUNT</span> below to permanently confirm:
             </p>
-          </div>
-
-          {!showDeleteModal ? (
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => setShowDeleteModal(true)}
-              icon={<Trash2 className="h-4 w-4" />}
-            >
-              Delete My Account
-            </Button>
-          ) : (
-            <div className="p-4 rounded-xl bg-white border border-rose-300 space-y-3 max-w-md animate-in fade-in zoom-in-95 duration-150">
-              <span className="text-xs text-slate-700 font-medium block">
-                Type <span className="font-mono font-bold text-rose-600">DELETE MY ACCOUNT</span> below to confirm:
-              </span>
-              <Input
-                value={confirmDeleteText}
-                onChange={(e) => setConfirmDeleteText(e.target.value)}
-                placeholder="DELETE MY ACCOUNT"
-                className="text-xs border-rose-300"
-              />
-              <div className="flex gap-2">
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={handleDeleteAccount}
-                  disabled={confirmDeleteText !== "DELETE MY ACCOUNT"}
-                  loading={busy}
-                >
-                  Permanently Delete
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setShowDeleteModal(false);
-                    setConfirmDeleteText("");
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
+            <Input
+              value={confirmDeleteText}
+              onChange={(e) => setConfirmDeleteText(e.target.value)}
+              placeholder="DELETE MY ACCOUNT"
+              className="border-rose-300 focus:border-rose-600 text-xs"
+            />
+            <div className="flex items-center gap-2 pt-1">
+              <Button
+                size="sm"
+                onClick={handleDeleteAccount}
+                loading={busy}
+                disabled={confirmDeleteText !== "DELETE MY ACCOUNT"}
+                className="bg-rose-600 hover:bg-rose-700 text-white"
+              >
+                Permanently Delete Account
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setConfirmDeleteText("");
+                }}
+              >
+                Cancel
+              </Button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </Panel>
     </div>
   );

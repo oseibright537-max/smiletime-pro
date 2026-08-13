@@ -28,28 +28,41 @@ import { AttendanceCharts } from "@/components/analytics/AttendanceCharts";
 import { MonthlyReportViewer } from "@/components/analytics/MonthlyReportViewer";
 import { downloadCsvBlob, generateCsvString } from "@/lib/export/downloader";
 import { checkAttendanceRules, evaluateTimeWindow } from "@/lib/attendance/time-windows";
+import { useOrganization } from "@/hooks/useOrganization";
 
 export const Route = createFileRoute("/console/")({ component: Overview });
 
-function useOverview() {
+function useOverview(organizationId?: string | null) {
   return useQuery({
-    queryKey: ["overview"],
+    queryKey: ["overview", organizationId],
     queryFn: async () => {
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
 
+      let empQ = supabase.from("employees").select("id,status,employee_code,full_name,department_id");
+      if (organizationId) empQ = empQ.or(`organization_id.eq.${organizationId},organization_id.is.null`);
+
+      let embQ = supabase.from("face_embeddings").select("employee_id");
+      if (organizationId) embQ = embQ.or(`organization_id.eq.${organizationId},organization_id.is.null`);
+
+      let evQ = supabase
+        .from("attendance_events")
+        .select(
+          "id,employee_id,kind,occurred_at,status,confidence,liveness_score,employees(full_name,employee_code,department_id)",
+        )
+        .gte("occurred_at", startOfDay.toISOString())
+        .order("occurred_at", { ascending: false })
+        .limit(100);
+      if (organizationId) evQ = evQ.or(`organization_id.eq.${organizationId},organization_id.is.null`);
+
+      let deptQ = supabase.from("departments").select("id,name");
+      if (organizationId) deptQ = deptQ.or(`organization_id.eq.${organizationId},organization_id.is.null`);
+
       const [employees, embeddings, events, departments] = await Promise.all([
-        supabase.from("employees").select("id,status,employee_code,full_name,department_id"),
-        supabase.from("face_embeddings").select("employee_id"),
-        supabase
-          .from("attendance_events")
-          .select(
-            "id,employee_id,kind,occurred_at,status,confidence,liveness_score,employees(full_name,employee_code,department_id)",
-          )
-          .gte("occurred_at", startOfDay.toISOString())
-          .order("occurred_at", { ascending: false })
-          .limit(100),
-        supabase.from("departments").select("id,name"),
+        empQ,
+        embQ,
+        evQ,
+        deptQ,
       ]);
 
       const enrolled = new Set((embeddings.data ?? []).map((e) => e.employee_id));
@@ -184,7 +197,8 @@ function computeEventClassification(occurredAt: string, kind: string): {
 }
 
 function Overview() {
-  const { data, isLoading } = useOverview();
+  const { currentOrg, currentOrgId } = useOrganization();
+  const { data, isLoading } = useOverview(currentOrgId);
   const [activeTab, setActiveTab] = useState<"live" | "analytics" | "monthly">("live");
   const [search, setSearch] = useState("");
   const [filterKind, setFilterKind] = useState<string>("all");

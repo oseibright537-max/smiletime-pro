@@ -9,6 +9,7 @@ import {
   KeyRound,
   Mail,
   User,
+  Building,
   Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -43,6 +44,7 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [companyName, setCompanyName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [resetSent, setResetSent] = useState(false);
@@ -62,7 +64,6 @@ function AuthPage() {
     setBusy(true);
     setFormError(null);
 
-
     const cleanEmail = email.trim().toLowerCase();
 
     try {
@@ -79,7 +80,10 @@ function AuthPage() {
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/auth`,
-            data: { full_name: fullName.trim() || cleanEmail },
+            data: {
+              full_name: fullName.trim() || cleanEmail,
+              company_name: companyName.trim() || `${fullName.trim() || cleanEmail}'s Company`,
+            },
           },
         });
         if (error) throw error;
@@ -89,10 +93,10 @@ function AuthPage() {
           toast.info("This email is already registered. Please sign in below.");
           setMode("signin");
         } else if (data?.session) {
-          toast.success("Account registered! Welcome to FaceTime Attendance.");
+          toast.success("Company workspace registered! Welcome to FaceTime Attendance.");
           navigate({ to: target });
         } else {
-          toast.success("Account created! Please check your email to activate your account or sign in.");
+          toast.success("Company registered! Please check your email to activate your account or sign in.");
           setMode("signin");
         }
       } else {
@@ -226,15 +230,27 @@ function AuthPage() {
                 </div>
               )}
               {mode === "signup" && (
-                <Field label="Full Name">
-                  <Input
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Elena Rostova"
-                    required
-                    maxLength={100}
-                  />
-                </Field>
+                <>
+                  <Field label="Full Name">
+                    <Input
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Elena Rostova"
+                      required
+                      maxLength={100}
+                    />
+                  </Field>
+
+                  <Field label="Company / Organization Name">
+                    <Input
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder="Acme Corporation Ltd"
+                      required
+                      maxLength={100}
+                    />
+                  </Field>
+                </>
               )}
 
               <Field label="Work Email Address">

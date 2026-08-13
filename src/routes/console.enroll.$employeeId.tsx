@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCamera } from "@/hooks/useCamera";
 import { useAuth } from "@/hooks/useAuth";
+import { useOrganization } from "@/hooks/useOrganization";
 import {
   analyseAllFaces,
   analyseFrame,
@@ -229,6 +230,8 @@ function Enroll() {
     }
   };
 
+  const { currentOrgId } = useOrganization();
+
   // Save single descriptor (from Snapshot or Upload)
   const saveVectorToDatabase = async (vector: Float32Array, poseLabel = "front") => {
     setSaving(true);
@@ -238,6 +241,7 @@ function Enroll() {
 
       // 2. Insert new 128-D vector literal
       const { error } = await supabase.from("face_embeddings").insert({
+        organization_id: currentOrgId || null,
         employee_id: employeeId,
         pose: poseLabel,
         quality: capturedQuality ? capturedQuality / 100 : 0.95,
@@ -275,7 +279,7 @@ function Enroll() {
     try {
       const res = await extractEmbeddingFromFile(file);
       if (!res.success || !res.descriptor) {
-        toast.error(res.error ?? "Failed to extract face vector from photo.");
+        toast.error(res.error || "Could not detect a clear human face in uploaded photo.");
         setUploadPreview(null);
         return;
       }
@@ -297,6 +301,7 @@ function Enroll() {
     setSaving(true);
     try {
       const rows = session.templates().map((t) => ({
+        organization_id: currentOrgId || null,
         employee_id: employeeId,
         pose: t.pose,
         quality: t.quality,

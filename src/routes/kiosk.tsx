@@ -22,7 +22,9 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useOrganization } from "@/hooks/useOrganization";
 import { useCamera } from "@/hooks/useCamera";
+import { Building } from "lucide-react";
 import {
   analyseFrame,
   cosineDistance,
@@ -73,6 +75,7 @@ const KIND_LABELS: Record<Kind, { label: string; tone: "success" | "primary" | "
 
 function Kiosk() {
   const { user, loading } = useAuth();
+  const { currentOrg, currentOrgId } = useOrganization();
   const { videoRef, start, stop, active, error, facingMode, flipCamera } = useCamera();
   const [modelsReady, setModelsReady] = useState(false);
   const [kind, setKind] = useState<Kind>("check_in");
@@ -128,29 +131,37 @@ function Kiosk() {
     return () => clearInterval(interval);
   }, []);
 
-  // Preload face recognition models & enrolled face vector templates
+  // Preload face recognition models & enrolled face vector templates for active company
   const loadTemplates = useCallback(async () => {
     setLoadingTemplates(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("face_embeddings")
-        .select("id, employee_id, embedding, pose, employees(id, full_name, employee_code, status)")
+        .select("id, employee_id, organization_id, embedding, pose, employees(id, full_name, employee_code, status, organization_id)")
         .order("created_at", { ascending: false });
 
+      if (currentOrgId) {
+        query = query.or(`organization_id.eq.${currentOrgId},organization_id.is.null`);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
 
       const parsed: EnrolledCandidate[] = [];
       for (const row of data ?? []) {
-        const emp = row.employees as { id: string; full_name: string; employee_code: string; status: string } | null;
+        const emp = row.employees as { id: string; full_name: string; employee_code: string; status: string; organization_id?: string } | null;
         if (emp && (!emp.status || emp.status === "active")) {
-          const vec = parseVectorLiteral(row.embedding);
-          if (vec) {
-            parsed.push({
-              employee_id: emp.id,
-              full_name: emp.full_name,
-              employee_code: emp.employee_code,
-              embedding: vec,
-            });
+          // If currentOrgId is active, only include if matches or null
+          if (!currentOrgId || !emp.organization_id || emp.organization_id === currentOrgId) {
+            const vec = parseVectorLiteral(row.embedding);
+            if (vec) {
+              parsed.push({
+                employee_id: emp.id,
+                full_name: emp.full_name,
+                employee_code: emp.employee_code,
+                embedding: vec,
+              });
+            }
           }
         }
       }
@@ -160,7 +171,7 @@ function Kiosk() {
     } finally {
       setLoadingTemplates(false);
     }
-  }, []);
+  }, [currentOrgId]);
 
   useEffect(() => {
     getFaceApi()
@@ -247,6 +258,7 @@ function Kiosk() {
         if (!matchEmployeeId || bestDistance > matchThreshold) {
           const { data: rpcData, error: rpcError } = await supabase.rpc("match_face", {
             probe: toVectorLiteral(descriptor) as unknown as string,
+            _org_id: currentOrgId || undefined,
             max_distance: matchThreshold,
           });
 
@@ -267,7 +279,7 @@ function Kiosk() {
               ok: false,
               message:
                 enrolledTemplates.length === 0
-                  ? "No facial templates enrolled in system. Please enrol at least one employee in Console > Employees."
+                  ? "No facial templates enrolled for this company. Please enrol at least one employee in Console > Employees."
                   : "No matching enrolled profile found. Please ensure you are enrolled with good lighting.",
               statusLabel: "Unknown Face",
               statusTone: "danger",
@@ -300,13 +312,18 @@ function Kiosk() {
 
         // DUPLICATE PREVENTER (within 45s)
         const since = new Date(Date.now() - DUPLICATE_WINDOW_MS).toISOString();
-        const { data: recent } = await supabase
+        let recentQuery = supabase
           .from("attendance_events")
           .select("id")
           .eq("employee_id", matchEmployeeId)
           .eq("kind", kindRef.current)
-          .gte("occurred_at", since)
-          .limit(1);
+          .gte("occurred_at", since);
+
+        if (currentOrgId) {
+          recentQuery = recentQuery.eq("organization_id", currentOrgId);
+        }
+
+        const { data: recent } = await recentQuery.limit(1);
 
         if (recent && recent.length > 0) {
           finish({
@@ -325,8 +342,9 @@ function Kiosk() {
         const finalStatus = bypassShiftRules ? "normal" : ruleCheck.status;
         const finalStatusLabel = bypassShiftRules ? "Verified (Test Mode)" : ruleCheck.statusLabel;
 
-        // INSERT ATTENDANCE EVENT INTO SUPABASE WITH STATUS
+        // INSERT ATTENDANCE EVENT INTO SUPABASE WITH STATUS AND TENANT ID
         const { error: insertError } = await supabase.from("attendance_events").insert({
+          organization_id: currentOrgId || undefined,
           employee_id: matchEmployeeId,
           kind: kindRef.current,
           status: finalStatus,

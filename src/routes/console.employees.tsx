@@ -22,12 +22,24 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Badge, Button, Field, Input, Panel, Select, Avatar } from "@/components/ui/primitives";
+import { useOrganization } from "@/hooks/useOrganization";
+import { Badge, Button, Field, Input, Panel, Select } from "@/components/ui/primitives";
 import { BulkEnrollmentModal } from "@/components/employees/BulkEnrollmentModal";
 import { DeleteEmployeeModal } from "@/components/employees/DeleteEmployeeModal";
 import { downloadCsvBlob, generateCsvString } from "@/lib/export/downloader";
 
-export const Route = createFileRoute("/console/employees")({ component: Employees });
+export const Route = createFileRoute("/console/employees")({
+  head: () => ({
+    meta: [
+      { title: "Employee Directory & Enrollment — FaceTime Attendance" },
+      {
+        name: "description",
+        content: "Manage employee profiles, biometric enrollment vectors, and department hierarchy.",
+      },
+    ],
+  }),
+  component: Employees,
+});
 
 const employeeSchema = z.object({
   employee_code: z.string().trim().min(1, "Employee code is required").max(32),
@@ -39,6 +51,7 @@ const employeeSchema = z.object({
 
 function Employees() {
   const { isStaff } = useAuth();
+  const { currentOrgId } = useOrganization();
   const qc = useQueryClient();
   const [form, setForm] = useState({
     employee_code: "",
@@ -62,22 +75,35 @@ function Employees() {
   } | null>(null);
 
   const departments = useQuery({
-    queryKey: ["departments"],
-    queryFn: async () => (await supabase.from("departments").select("*").order("name")).data ?? [],
+    queryKey: ["departments", currentOrgId],
+    queryFn: async () => {
+      let q = supabase.from("departments").select("*").order("name");
+      if (currentOrgId) {
+        q = q.or(`organization_id.eq.${currentOrgId},organization_id.is.null`);
+      }
+      return (await q).data ?? [];
+    },
   });
 
   const employees = useQuery({
-    queryKey: ["employees"],
+    queryKey: ["employees", currentOrgId],
     queryFn: async () => {
-      const [{ data: rows }, { data: templates }] = await Promise.all([
-        supabase
-          .from("employees")
-          .select(
-            "id,employee_code,full_name,email,job_title,status,department_id,departments(name)",
-          )
-          .order("created_at", { ascending: false }),
-        supabase.from("face_embeddings").select("employee_id"),
-      ]);
+      let empQ = supabase
+        .from("employees")
+        .select(
+          "id,employee_code,full_name,email,job_title,status,department_id,departments(name)",
+        )
+        .order("created_at", { ascending: false });
+      if (currentOrgId) {
+        empQ = empQ.or(`organization_id.eq.${currentOrgId},organization_id.is.null`);
+      }
+
+      let faceQ = supabase.from("face_embeddings").select("employee_id");
+      if (currentOrgId) {
+        faceQ = faceQ.or(`organization_id.eq.${currentOrgId},organization_id.is.null`);
+      }
+
+      const [{ data: rows }, { data: templates }] = await Promise.all([empQ, faceQ]);
       const counts = new Map<string, number>();
       (templates ?? []).forEach((t) =>
         counts.set(t.employee_id, (counts.get(t.employee_id) ?? 0) + 1),
@@ -90,6 +116,7 @@ function Employees() {
     mutationFn: async () => {
       const parsed = employeeSchema.parse(form);
       const { error } = await supabase.from("employees").insert({
+        organization_id: currentOrgId || null,
         employee_code: parsed.employee_code,
         full_name: parsed.full_name,
         email: parsed.email || null,
@@ -102,7 +129,7 @@ function Employees() {
       toast.success("Employee created successfully");
       setForm({ employee_code: "", full_name: "", email: "", job_title: "", department_id: "" });
       setIsAdding(false);
-      qc.invalidateQueries({ queryKey: ["employees"] });
+      qc.invalidateQueries({ queryKey: ["employees", currentOrgId] });
     },
     onError: (e) =>
       toast.error(e instanceof z.ZodError ? e.issues[0]!.message : (e as Error).message),
@@ -112,7 +139,10 @@ function Employees() {
     mutationFn: async () => {
       const name = newDept.trim();
       if (name.length < 2) throw new Error("Department name must be at least 2 characters");
-      const { error } = await supabase.from("departments").insert({ name });
+      const { error } = await supabase.from("departments").insert({
+        organization_id: currentOrgId || null,
+        name,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -540,6 +570,13 @@ function Employees() {
         }}
         loading={deleteEmployee.isPending}
         employee={employeeToDelete}
+      />
+
+      {/* Bulk Roster Ingestion Modal */}
+      <BulkEnrollmentModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        organizationId={currentOrgId || undefined}
       />
     </div>
   );

@@ -13,8 +13,10 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useOrganization } from "@/hooks/useOrganization";
 import { Badge, Button } from "@/components/ui/primitives";
 import { Logo } from "@/components/ui/logo";
+import { Building, ChevronDown } from "lucide-react";
 
 export const Route = createFileRoute("/console")({
   ssr: false,
@@ -38,6 +40,7 @@ const nav = [
 
 function ConsoleLayout() {
   const { user, loading, roles, signOut } = useAuth();
+  const { currentOrg, organizations, switchOrganization } = useOrganization();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -72,11 +75,35 @@ function ConsoleLayout() {
       {/* Top Glass Navigation Header */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 py-2.5 sm:py-3">
-          {/* Left: Brand Logo */}
-          <div className="flex items-center gap-4 lg:gap-6">
+          {/* Left: Brand Logo & Organization Pill */}
+          <div className="flex items-center gap-3 sm:gap-4 lg:gap-6">
             <Link to="/" className="group flex items-center">
               <Logo size="sm" subtitle="Enterprise Hub" />
             </Link>
+
+            {/* Active Company Badge / Switcher */}
+            {currentOrg && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50/90 border border-indigo-200/90 rounded-xl text-indigo-900 text-xs font-semibold shadow-2xs">
+                <Building className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+                {organizations.length > 1 ? (
+                  <select
+                    value={currentOrg.id}
+                    onChange={(e) => switchOrganization(e.target.value)}
+                    className="bg-transparent font-bold text-indigo-900 text-xs focus:outline-none cursor-pointer pr-1"
+                  >
+                    {organizations.map((org) => (
+                      <option key={org.id} value={org.id}>
+                        {org.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="max-w-[120px] sm:max-w-[160px] truncate font-bold text-indigo-900">
+                    {currentOrg.name}
+                  </span>
+                )}
+              </div>
+            )}
 
             {/* Desktop Navigation Tabs (Hidden on Mobile/Tablet < md) */}
             <nav className="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
