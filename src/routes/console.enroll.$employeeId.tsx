@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, useParams, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Check,
@@ -19,10 +19,12 @@ import {
   Lock,
   UserCheck,
   Info,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCamera } from "@/hooks/useCamera";
+import { useAuth } from "@/hooks/useAuth";
 import {
   analyseAllFaces,
   analyseFrame,
@@ -35,6 +37,7 @@ import {
 } from "@/lib/face/engine";
 import { ANGLES, EnrolmentSession, TOTAL_TARGET, type AngleKey } from "@/lib/face/capture";
 import { Badge, Button, Panel } from "@/components/ui/primitives";
+import { DeleteEmployeeModal } from "@/components/employees/DeleteEmployeeModal";
 
 export const Route = createFileRoute("/console/enroll/$employeeId")({ component: Enroll });
 
@@ -43,7 +46,10 @@ type EnrollTab = "snapshot" | "upload" | "guided";
 function Enroll() {
   const { employeeId } = useParams({ from: "/console/enroll/$employeeId" });
   const navigate = useNavigate();
+  const qc = useQueryClient();
+  const { isStaff } = useAuth();
   const [tab, setTab] = useState<EnrollTab>("snapshot");
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   // Camera & Face API
   const { videoRef, start, stop, active, error: cameraError } = useCamera();
@@ -88,7 +94,7 @@ function Enroll() {
       const [{ data: emp }, { data: embeddings }] = await Promise.all([
         supabase
           .from("employees")
-          .select("id,full_name,employee_code,job_title")
+          .select("id,full_name,employee_code,job_title,department_id,departments(name)")
           .eq("id", employeeId)
           .single(),
         supabase
@@ -101,6 +107,21 @@ function Enroll() {
         templatesCount: embeddings?.length ?? 0,
       };
     },
+  });
+
+  const deleteEmployee = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("employees").delete().eq("id", employeeId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Employee permanently deleted");
+      qc.invalidateQueries({ queryKey: ["employees"] });
+      qc.invalidateQueries({ queryKey: ["overview"] });
+      qc.invalidateQueries({ queryKey: ["report_employees"] });
+      navigate({ to: "/console/employees" });
+    },
+    onError: (e) => toast.error((e as Error).message),
   });
 
   // Warm up face recognition neural networks
@@ -302,24 +323,26 @@ function Enroll() {
   const ring = 2 * Math.PI * 46;
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="space-y-5 sm:space-y-6 max-w-6xl mx-auto">
       {/* Top Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-4 border-b border-slate-200">
         <div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3">
             <Link
               to="/console/employees"
-              className="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 transition-colors shadow-xs"
+              className="p-1.5 sm:p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 transition-colors shadow-xs shrink-0"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <h1 className="text-2xl font-bold text-slate-900 font-display">Biometric Face Enrollment</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 font-display">
+              Biometric Face Enrollment
+            </h1>
           </div>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-xs sm:text-sm text-slate-500">
             {employee.data?.full_name ? (
-              <span className="flex items-center gap-2">
+              <span className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <span className="font-semibold text-slate-900">{employee.data.full_name}</span>
-                <span className="font-mono text-indigo-600">({employee.data.employee_code})</span>
+                <span className="font-mono text-indigo-600 font-bold">({employee.data.employee_code})</span>
                 {employee.data.job_title && (
                   <span className="text-slate-500">· {employee.data.job_title}</span>
                 )}
@@ -331,7 +354,7 @@ function Enroll() {
         </div>
 
         {employee.data && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
             {employee.data.templatesCount > 0 ? (
               <Badge tone="success" pulse size="md">
                 {employee.data.templatesCount} ACTIVE TEMPLATES
@@ -341,22 +364,34 @@ function Enroll() {
                 NOT ENROLLED YET
               </Badge>
             )}
+
+            {isStaff && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsDeleteModalOpen(true)}
+                icon={<Trash2 className="h-4 w-4 text-rose-600" />}
+                className="text-rose-700 hover:bg-rose-50 border-rose-200 shrink-0"
+              >
+                Delete Profile
+              </Button>
+            )}
           </div>
         )}
       </div>
 
       {/* Mode Selector Tabs */}
-      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
+      <div className="flex items-center gap-1.5 sm:gap-2 border-b border-slate-200 pb-3 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0 whitespace-nowrap">
         <button
           onClick={() => handleTabChange("snapshot")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shrink-0 ${
             tab === "snapshot"
               ? "bg-indigo-600 text-white shadow-sm"
               : "bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
           }`}
         >
           <Camera className="h-4 w-4" />
-          Live Camera Snapshot
+          <span>Live Camera Snapshot</span>
           <Badge tone={tab === "snapshot" ? "neutral" : "primary"} size="sm">
             FAST
           </Badge>
@@ -364,14 +399,14 @@ function Enroll() {
 
         <button
           onClick={() => handleTabChange("upload")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shrink-0 ${
             tab === "upload"
               ? "bg-indigo-600 text-white shadow-sm"
               : "bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
           }`}
         >
           <UploadCloud className="h-4 w-4" />
-          Upload Picture File
+          <span>Upload Picture File</span>
           <Badge tone={tab === "upload" ? "neutral" : "primary"} size="sm">
             NO WEBCAM
           </Badge>
@@ -379,14 +414,17 @@ function Enroll() {
 
         <button
           onClick={() => handleTabChange("guided")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shrink-0 ${
             tab === "guided"
               ? "bg-indigo-600 text-white shadow-sm"
               : "bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
           }`}
         >
-          <Layers className="h-4 w-4" />
-          Assisted 5-Angle Scan
+          <Sparkles className="h-4 w-4" />
+          <span>Guided 5-Angle Capture</span>
+          <Badge tone={tab === "guided" ? "neutral" : "success"} size="sm">
+            HIGH ACCURACY
+          </Badge>
         </button>
       </div>
 
@@ -799,6 +837,24 @@ function Enroll() {
           </Panel>
         </div>
       </div>
+
+      {/* Delete Employee Modal */}
+      {employee.data && (
+        <DeleteEmployeeModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={() => deleteEmployee.mutate()}
+          loading={deleteEmployee.isPending}
+          employee={{
+            id: employeeId,
+            full_name: employee.data.full_name,
+            employee_code: employee.data.employee_code,
+            job_title: employee.data.job_title,
+            department_name: (employee.data.departments as { name: string } | null)?.name,
+            templatesCount: employee.data.templatesCount,
+          }}
+        />
+      )}
     </div>
   );
 }

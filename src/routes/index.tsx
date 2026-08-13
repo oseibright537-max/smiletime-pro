@@ -104,10 +104,10 @@ function Landing() {
       </div>
 
       {/* Modern Floating Island Navigation Bar */}
-      <div className="sticky top-4 z-50 px-4 sm:px-6">
-        <header className="mx-auto max-w-6xl rounded-2xl bg-white/85 backdrop-blur-xl border border-slate-200/80 shadow-lg shadow-slate-900/5 transition-all duration-300">
-          <div className="flex items-center justify-between px-5 py-3">
-            <Link to="/" className="group">
+      <div className="sticky top-3 sm:top-4 z-50 px-3 sm:px-6">
+        <header className="mx-auto max-w-6xl rounded-2xl bg-white/90 backdrop-blur-xl border border-slate-200 shadow-md shadow-slate-900/5 transition-all duration-300">
+          <div className="flex items-center justify-between px-4 sm:px-5 py-2.5 sm:py-3">
+            <Link to="/" className="group shrink-0">
               <Logo size="sm" subtitle="Biometric Attendance" />
             </Link>
 
@@ -132,8 +132,8 @@ function Landing() {
               </a>
             </nav>
 
-            <div className="flex items-center gap-2.5">
-              <Link to="/kiosk">
+            <div className="flex items-center gap-2">
+              <Link to="/kiosk" className="hidden sm:inline-flex">
                 <Button
                   variant="outline"
                   size="sm"
@@ -151,44 +151,45 @@ function Landing() {
       </div>
 
       {/* Hero Section */}
-      <section className="relative z-10 mx-auto max-w-7xl px-6 pt-16 pb-20 sm:pt-24 sm:pb-28">
-        <div className="grid lg:grid-cols-12 gap-12 items-center">
-          <div className="lg:col-span-7 space-y-6">
-            <div className="inline-flex items-center gap-2 rounded-full bg-indigo-50 border border-indigo-200 px-3.5 py-1.5 text-xs text-indigo-700 font-semibold shadow-xs">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              <span>Zero Photo Storage · Irreversible Vectors</span>
+      <section className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 pt-10 pb-16 sm:pt-20 sm:pb-24">
+        <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+          <div className="lg:col-span-7 space-y-5 sm:space-y-6">
+            <div className="inline-flex items-center gap-2 rounded-full bg-indigo-50 border border-indigo-200 px-3.5 py-1.5 text-xs text-indigo-700 font-semibold shadow-xs max-w-full">
+              <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">Zero Photo Storage · Irreversible Vectors</span>
             </div>
 
-            <h1 className="font-display text-4xl sm:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.1]">
+            <h1 className="font-display text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.15] break-words">
               Enterprise facial attendance without storing photos.
             </h1>
 
-            <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl font-light">
+            <p className="text-sm sm:text-lg text-slate-600 leading-relaxed max-w-2xl font-light">
               High-speed biometric clock-in terminal powered by on-device neural vectors. Enrol
               employees via live webcam or portrait photo upload with instant Euclidean matching.
             </p>
 
-            <div className="flex flex-wrap items-center gap-4 pt-2">
-              <Link to="/auth" search={{ next: "/console" }}>
-                <Button size="lg" icon={<ArrowRight className="h-4 w-4" />}>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
+              <Link to="/auth" search={{ next: "/console" }} className="w-full sm:w-auto">
+                <Button size="lg" className="w-full justify-center" icon={<ArrowRight className="h-4 w-4" />}>
                   Access Workforce Console
                 </Button>
               </Link>
-              <Link to="/kiosk">
+              <Link to="/kiosk" className="w-full sm:w-auto">
                 <Button
                   size="lg"
                   variant="outline"
+                  className="w-full justify-center"
                   icon={<ScanFace className="h-4 w-4 text-indigo-600" />}
                 >
-                  Launch Attendance Kiosk
+                  Launch Kiosk Terminal
                 </Button>
               </Link>
             </div>
 
-            <div className="pt-6 border-t border-slate-200 grid grid-cols-3 gap-6 text-slate-600 text-xs">
+            <div className="pt-5 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4 text-slate-600 text-xs">
               <div className="flex items-center gap-2 font-medium">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                <span>On-Device Face Matching</span>
+                <span>On-Device Match</span>
               </div>
               <div className="flex items-center gap-2 font-medium">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
@@ -196,7 +197,7 @@ function Landing() {
               </div>
               <div className="flex items-center gap-2 font-medium">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                <span>pgvector Integration</span>
+                <span>pgvector Index</span>
               </div>
             </div>
           </div>

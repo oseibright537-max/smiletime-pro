@@ -145,22 +145,27 @@ export async function analyseFrame(
   video: HTMLVideoElement,
   options: { inputSize?: number; scoreThreshold?: number } = {},
 ): Promise<FaceSample | null> {
+  if (!video || !video.videoWidth || video.readyState < 2) return null;
   const faceapi = await getFaceApi();
-  if (!video.videoWidth) return null;
 
   const inputSize = options.inputSize ?? 416;
-  const scoreThreshold = options.scoreThreshold ?? 0.35;
+  const scoreThreshold = options.scoreThreshold ?? 0.28;
 
-  const result = await faceapi
-    .detectSingleFace(
-      video,
-      new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold }),
-    )
-    .withFaceLandmarks()
-    .withFaceDescriptor();
+  try {
+    const result = await faceapi
+      .detectSingleFace(
+        video,
+        new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold }),
+      )
+      .withFaceLandmarks()
+      .withFaceDescriptor();
 
-  if (!result) return null;
-  return toSample(result as never, video.videoWidth);
+    if (!result) return null;
+    return toSample(result as never, video.videoWidth);
+  } catch (err) {
+    console.warn("analyseFrame detection skipped frame:", err);
+    return null;
+  }
 }
 
 /**
@@ -170,25 +175,29 @@ export async function analyseAllFaces(
   video: HTMLVideoElement,
   options: { inputSize?: number; scoreThreshold?: number } = {},
 ): Promise<FaceSample[]> {
+  if (!video || !video.videoWidth || video.readyState < 2) return [];
   const faceapi = await getFaceApi();
-  if (!video.videoWidth) return [];
 
   const inputSize = options.inputSize ?? 416;
-  const scoreThreshold = options.scoreThreshold ?? 0.35;
+  const scoreThreshold = options.scoreThreshold ?? 0.28;
 
-  const results = await faceapi
-    .detectAllFaces(
-      video,
-      new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold }),
-    )
-    .withFaceLandmarks()
-    .withFaceDescriptors();
+  try {
+    const results = await faceapi
+      .detectAllFaces(
+        video,
+        new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold }),
+      )
+      .withFaceLandmarks()
+      .withFaceDescriptors();
 
-  return results
-    .map((r) => toSample(r as never, video.videoWidth))
-    .sort((a, b) => b.box.width - a.box.width);
+    return results
+      .map((r) => toSample(r as never, video.videoWidth))
+      .sort((a, b) => b.box.width - a.box.width);
+  } catch (err) {
+    console.warn("analyseAllFaces detection skipped frame:", err);
+    return [];
+  }
 }
-
 
 /** L2-normalised mean of several descriptors — a more stable template. */
 export function averageDescriptors(descriptors: Float32Array[]): Float32Array {

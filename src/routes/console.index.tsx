@@ -15,9 +15,19 @@ import {
   Sparkles,
   Download,
   AlertCircle,
+  BarChart3,
+  FileSpreadsheet,
+  Layers,
+  Sun,
+  Sunset,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge, Button, Panel, Avatar, Input } from "@/components/ui/primitives";
+import { TimeWindowBanner } from "@/components/attendance/TimeWindowBanner";
+import { AttendanceCharts } from "@/components/analytics/AttendanceCharts";
+import { MonthlyReportViewer } from "@/components/analytics/MonthlyReportViewer";
+import { downloadCsvBlob, generateCsvString } from "@/lib/export/downloader";
+import { checkAttendanceRules, evaluateTimeWindow } from "@/lib/attendance/time-windows";
 
 export const Route = createFileRoute("/console/")({ component: Overview });
 
@@ -28,34 +38,64 @@ function useOverview() {
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
 
-      const [employees, embeddings, events] = await Promise.all([
-        supabase.from("employees").select("id,status,employee_code,full_name"),
+      const [employees, embeddings, events, departments] = await Promise.all([
+        supabase.from("employees").select("id,status,employee_code,full_name,department_id"),
         supabase.from("face_embeddings").select("employee_id"),
         supabase
           .from("attendance_events")
           .select(
-            "id,employee_id,kind,occurred_at,confidence,liveness_score,employees(full_name,employee_code)",
+            "id,employee_id,kind,occurred_at,status,confidence,liveness_score,employees(full_name,employee_code,department_id)",
           )
           .gte("occurred_at", startOfDay.toISOString())
           .order("occurred_at", { ascending: false })
-          .limit(50),
+          .limit(100),
+        supabase.from("departments").select("id,name"),
       ]);
 
       const enrolled = new Set((embeddings.data ?? []).map((e) => e.employee_id));
       const active = (employees.data ?? []).filter((e) => e.status === "active");
-      const presentToday = new Set(
-        (events.data ?? []).filter((e) => e.kind === "check_in").map((e) => e.employee_id),
-      );
+
+      // Categorize arrivals today
+      let onTimeCount = 0;
+      let lateCount = 0;
+      let validatedClockOutCount = 0;
+      let earlyClockOutCount = 0;
+      const presentToday = new Set<string>();
+
+      (events.data ?? []).forEach((e) => {
+        const d = new Date(e.occurred_at);
+        const min = d.getHours() * 60 + d.getMinutes();
+
+        if (e.kind === "check_in") {
+          presentToday.add(e.employee_id);
+          if (min <= 510) {
+            onTimeCount++;
+          } else {
+            lateCount++;
+          }
+        } else if (e.kind === "check_out") {
+          if (min >= 1000 && min <= 1200) {
+            validatedClockOutCount++;
+          } else {
+            earlyClockOutCount++;
+          }
+        }
+      });
 
       return {
         total: employees.data?.length ?? 0,
         active: active.length,
         enrolled: enrolled.size,
         present: presentToday.size,
+        onTimeCount,
+        lateCount,
+        validatedClockOutCount,
+        earlyClockOutCount,
         events: events.data ?? [],
+        departments: departments.data ?? [],
       };
     },
-    refetchInterval: 10000,
+    refetchInterval: 8000,
   });
 }
 
@@ -71,7 +111,7 @@ function StatCard({
   value: string | number;
   hint: string;
   icon: typeof Users;
-  tone?: "primary" | "success" | "warning" | "neutral";
+  tone?: "primary" | "success" | "warning" | "neutral" | "danger";
   trend?: string | undefined;
 }) {
   const tones = {
@@ -79,30 +119,31 @@ function StatCard({
     success: "border-emerald-100 bg-emerald-50 text-emerald-600",
     warning: "border-amber-100 bg-amber-50 text-amber-600",
     neutral: "border-slate-200 bg-slate-50 text-slate-600",
+    danger: "border-rose-100 bg-rose-50 text-rose-600",
   };
 
   return (
-    <Panel interactive className="relative overflow-hidden p-6 flex flex-col justify-between bg-white border border-slate-200 shadow-sm rounded-2xl">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 font-display">
+    <Panel interactive className="relative overflow-hidden p-3.5 sm:p-5 flex flex-col justify-between bg-white border border-slate-200 shadow-sm rounded-2xl">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-500 font-display truncate">
             {label}
           </p>
-          <p className="mt-3 font-display text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+          <p className="mt-1 sm:mt-2 font-display text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">
             {value}
           </p>
         </div>
         <div
-          className={`flex h-11 w-11 items-center justify-center rounded-2xl border ${tones[tone]}`}
+          className={`flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl border ${tones[tone]}`}
         >
-          <Icon className="h-5 w-5" />
+          <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
         </div>
       </div>
 
-      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-        <span className="text-slate-500">{hint}</span>
+      <div className="mt-2.5 sm:mt-3 pt-2 sm:pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
+        <span className="text-slate-500 text-[10px] sm:text-[11px] truncate">{hint}</span>
         {trend && (
-          <span className="inline-flex items-center text-emerald-600 font-semibold">
+          <span className="inline-flex items-center text-emerald-600 font-semibold text-[10px] sm:text-[11px] shrink-0 ml-1">
             {trend}
             <ArrowUpRight className="h-3 w-3" />
           </span>
@@ -112,23 +153,39 @@ function StatCard({
   );
 }
 
-function computeLateness(occurredAt: string, kind: string): { isLate: boolean; label: string } {
-  if (kind !== "check_in") return { isLate: false, label: "Normal" };
+function computeEventClassification(occurredAt: string, kind: string): {
+  isLate: boolean;
+  isValidatedDeparture: boolean;
+  isEarlyDeparture: boolean;
+  label: string;
+  tone: "success" | "warning" | "primary" | "danger" | "neutral";
+} {
   const d = new Date(occurredAt);
-  const hours = d.getHours();
-  const minutes = d.getMinutes();
-  // Standard Shift Start: 9:00 AM
-  const totalMinutes = hours * 60 + minutes;
-  const shiftStartMinutes = 9 * 60; // 9:00 AM
-  if (totalMinutes > shiftStartMinutes) {
-    const diff = totalMinutes - shiftStartMinutes;
-    return { isLate: true, label: `Late (+${diff}m)` };
+  const min = d.getHours() * 60 + d.getMinutes();
+
+  if (kind === "check_in") {
+    if (min <= 510) {
+      return { isLate: false, isValidatedDeparture: false, isEarlyDeparture: false, label: "On Time", tone: "success" };
+    } else {
+      const diff = min - 510;
+      return { isLate: true, isValidatedDeparture: false, isEarlyDeparture: false, label: `Late (+${diff}m)`, tone: "warning" };
+    }
   }
-  return { isLate: false, label: "On Time" };
+
+  if (kind === "check_out") {
+    if (min >= 1000 && min <= 1200) {
+      return { isLate: false, isValidatedDeparture: true, isEarlyDeparture: false, label: "Validated Departure", tone: "primary" };
+    } else if (min < 1000) {
+      return { isLate: false, isValidatedDeparture: false, isEarlyDeparture: true, label: "Early Departure", tone: "danger" };
+    }
+  }
+
+  return { isLate: false, isValidatedDeparture: false, isEarlyDeparture: false, label: "Normal", tone: "neutral" };
 }
 
 function Overview() {
   const { data, isLoading } = useOverview();
+  const [activeTab, setActiveTab] = useState<"live" | "analytics" | "monthly">("live");
   const [search, setSearch] = useState("");
   const [filterKind, setFilterKind] = useState<string>("all");
 
@@ -157,47 +214,42 @@ function Overview() {
       "Event Type",
       "Date",
       "Time",
-      "Punctuality",
+      "Classification Status",
       "Neural Confidence",
       "Liveness Score",
-      "Status",
+      "Verification Status",
     ];
-    const csvRows = events.map((e) => {
+    const rows = events.map((e) => {
       const emp = e.employees as { full_name: string; employee_code: string } | null;
       const dateObj = new Date(e.occurred_at);
-      const lateness = computeLateness(e.occurred_at, e.kind);
+      const classification = computeEventClassification(e.occurred_at, e.kind);
+
       return [
-        `"${emp?.employee_code ?? ""}"`,
-        `"${(emp?.full_name ?? "Unknown").replace(/"/g, '""')}"`,
-        `"${e.kind.replace("_", " ").toUpperCase()}"`,
-        `"${dateObj.toLocaleDateString()}"`,
-        `"${dateObj.toLocaleTimeString()}"`,
-        `"${lateness.label}"`,
-        `"${e.confidence != null ? Math.round(e.confidence * 100) + "%" : "N/A"}"`,
-        `"${e.liveness_score != null ? Math.round(e.liveness_score * 100) + "%" : "N/A"}"`,
-        `"Verified"`,
-      ].join(",");
+        emp?.employee_code ?? "—",
+        emp?.full_name ?? "Unknown",
+        e.kind.toUpperCase(),
+        dateObj.toLocaleDateString(),
+        dateObj.toLocaleTimeString(),
+        classification.label,
+        e.confidence != null ? `${Math.round(e.confidence * 100)}%` : "N/A",
+        e.liveness_score != null ? `${Math.round(e.liveness_score * 100)}%` : "N/A",
+        "Verified Biometric",
+      ];
     });
 
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...csvRows].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute(
-      "download",
+    const csvContent = generateCsvString(headers, rows);
+    downloadCsvBlob(
       `facetime_attendance_report_${new Date().toISOString().slice(0, 10)}.csv`,
+      csvContent,
     );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* Top Header & Fast Actions */}
-      <div className="flex flex-wrap items-end justify-between gap-4 pb-4 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 font-display">
               Workforce Intelligence
             </h1>
@@ -205,235 +257,308 @@ function Overview() {
               LIVE TELEMETRY
             </Badge>
           </div>
-          <p className="mt-1 text-sm text-slate-500">
-            Real-time biometric recognition logs, presence tracking, and face template status.
+          <p className="mt-1 text-xs sm:text-sm text-slate-500">
+            Real-time biometric attendance, automated 8:30 AM threshold categorizations, and HR analytics.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <Button
             variant="outline"
             size="sm"
             onClick={exportCsv}
             disabled={events.length === 0}
             icon={<Download className="h-4 w-4 text-indigo-600" />}
+            className="flex-1 sm:flex-none justify-center"
           >
-            Export Attendance CSV
+            Export Today's CSV
           </Button>
-          <Link to="/console/employees">
-            <Button variant="outline" size="sm" icon={<UserPlus className="h-4 w-4" />}>
-              Add Employee
+          <Link to="/console/employees" className="flex-1 sm:flex-none">
+            <Button
+              variant="outline"
+              size="sm"
+              icon={<UserPlus className="h-4 w-4" />}
+              className="w-full justify-center"
+            >
+              Directory & Roster
             </Button>
           </Link>
-          <Link to="/kiosk">
-            <Button size="sm" icon={<ScanFace className="h-4 w-4" />}>
-              Launch Kiosk Terminal
+          <Link to="/kiosk" className="w-full sm:w-auto">
+            <Button size="sm" icon={<ScanFace className="h-4 w-4" />} className="w-full justify-center">
+              Launch Kiosk
             </Button>
           </Link>
         </div>
       </div>
 
-      {/* KPI Cards Grid */}
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Real-time Shift Window Status Banner */}
+      <TimeWindowBanner showRulesGuide={true} />
+
+      {/* Primary KPI Cards Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
         <StatCard
           label="Present Today"
           value={isLoading ? "—" : data!.present}
-          hint={`${attendanceRate}% of workforce checked in`}
+          hint={`${attendanceRate}% of workforce`}
           icon={CheckCircle2}
           tone="success"
           {...(attendanceRate > 0 ? { trend: `${attendanceRate}%` } : {})}
         />
         <StatCard
-          label="Active Employees"
-          value={isLoading ? "—" : data!.active}
-          hint="Eligible for biometric sign-in"
-          icon={Users}
-          tone="primary"
+          label="On Time (<8:30 AM)"
+          value={isLoading ? "—" : data!.onTimeCount}
+          hint="Compliant morning arrivals"
+          icon={Sun}
+          tone="success"
         />
         <StatCard
-          label="Face Enrolled"
-          value={isLoading ? "—" : data!.enrolled}
-          hint="Biometric templates ready"
-          icon={ScanFace}
-          tone="primary"
-        />
-        <StatCard
-          label="Awaiting Enrollment"
-          value={isLoading ? "—" : Math.max(0, data!.active - data!.enrolled)}
-          hint="Cannot use kiosk yet"
+          label="Late (>8:30 AM)"
+          value={isLoading ? "—" : data!.lateCount}
+          hint="Arrived after 8:30 AM cutoff"
           icon={Clock}
-          tone={data && data.active > data.enrolled ? "warning" : "neutral"}
+          tone={data && data.lateCount > 0 ? "warning" : "neutral"}
         />
+        <StatCard
+          label="Validated Departures"
+          value={isLoading ? "—" : data!.validatedClockOutCount}
+          hint="4:40 PM – 8:00 PM valid exit"
+          icon={Sunset}
+          tone="primary"
+        />
+        <div className="col-span-2 sm:col-span-1">
+          <StatCard
+            label="Absentees"
+            value={isLoading ? "—" : Math.max(0, (data?.active ?? 0) - (data?.present ?? 0))}
+            hint="Not yet clocked in"
+            icon={Users}
+            tone="neutral"
+          />
+        </div>
       </div>
 
-      {/* Recognition Log Panel */}
-      <Panel className="p-0 overflow-hidden border border-slate-200 bg-white rounded-2xl shadow-sm">
-        {/* Table Header & Filters */}
-        <div className="border-b border-slate-200 px-6 py-4 flex flex-wrap items-center justify-between gap-4 bg-slate-50/70">
-          <div>
-            <h2 className="text-base font-bold text-slate-900 tracking-tight font-display flex items-center gap-2">
-              <Activity className="h-4 w-4 text-indigo-600" />
-              Live Recognition Log — Today
-            </h2>
-            <span className="text-xs text-slate-500">
-              Automatic duplicate suppression, shift punctuality, & liveness scoring applied per event.
-            </span>
-          </div>
+      {/* Main Navigation View Selector Tabs */}
+      <div className="flex items-center gap-1.5 sm:gap-2 border-b border-slate-200 pb-2 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0">
+        <button
+          onClick={() => setActiveTab("live")}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap ${
+            activeTab === "live"
+              ? "bg-indigo-600 text-white shadow-xs"
+              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+          }`}
+        >
+          <Activity className="h-4 w-4" />
+          <span>Live Telemetry Log</span>
+        </button>
 
-          <div className="flex items-center gap-3">
-            {/* Search Input */}
-            <div className="relative w-48 sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-              <Input
-                placeholder="Filter by name or code..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 h-9 text-xs"
-              />
+        <button
+          onClick={() => setActiveTab("analytics")}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap ${
+            activeTab === "analytics"
+              ? "bg-indigo-600 text-white shadow-xs"
+              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+          }`}
+        >
+          <BarChart3 className="h-4 w-4" />
+          <span>Analytics & Charts</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("monthly")}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap ${
+            activeTab === "monthly"
+              ? "bg-indigo-600 text-white shadow-xs"
+              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+          }`}
+        >
+          <FileSpreadsheet className="h-4 w-4" />
+          <span>Monthly HR & Payroll</span>
+        </button>
+      </div>
+
+      {/* TAB 1: Live Recognition Telemetry Log */}
+      {activeTab === "live" && (
+        <Panel className="p-0 overflow-hidden border border-slate-200 bg-white rounded-2xl shadow-sm animate-in fade-in duration-200">
+          {/* Table Header & Filters */}
+          <div className="border-b border-slate-200 px-4 sm:px-6 py-3.5 sm:py-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/70">
+            <div>
+              <h2 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight font-display flex items-center gap-2">
+                <Activity className="h-4 w-4 text-indigo-600 shrink-0" />
+                <span>Live Recognition Stream — Today</span>
+              </h2>
+              <span className="text-xs text-slate-500 block mt-0.5">
+                Automated 8:30 AM late categorization & 4:40 PM departure validation applied per event.
+              </span>
             </div>
 
-            {/* Event Filter */}
-            <select
-              value={filterKind}
-              onChange={(e) => setFilterKind(e.target.value)}
-              className="h-9 rounded-xl border border-slate-300 bg-white px-3 text-xs text-slate-800 focus:border-indigo-600 focus:outline-none"
-            >
-              <option value="all">All Events</option>
-              <option value="check_in">Clock In</option>
-              <option value="check_out">Clock Out</option>
-              <option value="break_start">Break Start</option>
-              <option value="break_end">Break End</option>
-            </select>
-          </div>
-        </div>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                <Input
+                  placeholder="Filter by name or code..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 h-9 text-xs w-full"
+                />
+              </div>
 
-        {/* Table Content */}
-        {isLoading ? (
-          <div className="px-6 py-12 text-center text-sm text-slate-500 flex items-center justify-center gap-2">
-            <div className="h-4 w-4 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
-            Loading live events...
-          </div>
-        ) : events.length === 0 ? (
-          <div className="px-6 py-16 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 border border-slate-200 text-slate-500 mb-3">
-              <ScanFace className="h-6 w-6 text-indigo-600" />
-            </div>
-            <h3 className="text-base font-semibold text-slate-900">
-              No attendance events logged yet today
-            </h3>
-            <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
-              Launch the attendance kiosk terminal to start scanning enrolled employees.
-            </p>
-            <div className="mt-5">
-              <Link to="/kiosk">
-                <Button size="sm" icon={<Zap className="h-3.5 w-3.5" />}>
-                  Launch Kiosk Mode
-                </Button>
-              </Link>
+              <select
+                value={filterKind}
+                onChange={(e) => setFilterKind(e.target.value)}
+                className="h-9 rounded-xl border border-slate-300 bg-white px-3 text-xs text-slate-800 focus:border-indigo-600 focus:outline-none cursor-pointer shrink-0"
+              >
+                <option value="all">All Events</option>
+                <option value="check_in">Clock In</option>
+                <option value="check_out">Clock Out</option>
+              </select>
             </div>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-100/70 text-xs font-semibold uppercase tracking-wider text-slate-600 font-display">
-                <tr>
-                  <th className="px-6 py-3">Employee</th>
-                  <th className="px-6 py-3">Event Type</th>
-                  <th className="px-6 py-3">Punctuality</th>
-                  <th className="px-6 py-3">Timestamp</th>
-                  <th className="px-6 py-3">Neural Match</th>
-                  <th className="px-6 py-3">Liveness Verification</th>
-                  <th className="px-6 py-3 text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {events.map((e) => {
-                  const emp = e.employees as { full_name: string; employee_code: string } | null;
-                  const name = emp?.full_name ?? "Unknown Employee";
-                  const code = emp?.employee_code ?? "—";
-                  const isCheckIn = e.kind === "check_in";
-                  const isCheckOut = e.kind === "check_out";
-                  const lateness = computeLateness(e.occurred_at, e.kind);
 
-                  return (
-                    <tr key={e.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <Avatar name={name} size="sm" />
-                          <div>
-                            <span className="font-semibold text-slate-900 block text-sm">{name}</span>
-                            <span className="font-mono text-xs text-slate-500">{code}</span>
+          {/* Table Content */}
+          {isLoading ? (
+            <div className="px-6 py-12 text-center text-sm text-slate-500 flex items-center justify-center gap-2">
+              <div className="h-4 w-4 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
+              Loading live events...
+            </div>
+          ) : events.length === 0 ? (
+            <div className="px-6 py-16 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 border border-slate-200 text-slate-500 mb-3">
+                <ScanFace className="h-6 w-6 text-indigo-600" />
+              </div>
+              <h3 className="text-base font-semibold text-slate-900">
+                No attendance events logged yet today
+              </h3>
+              <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
+                Launch the attendance kiosk terminal to start scanning enrolled employees.
+              </p>
+              <div className="mt-5">
+                <Link to="/kiosk">
+                  <Button size="sm" icon={<Zap className="h-3.5 w-3.5" />}>
+                    Launch Kiosk Mode
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs sm:text-sm min-w-[720px]">
+                <thead className="border-b border-slate-200 bg-slate-100/70 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 font-display">
+                  <tr>
+                    <th className="px-4 sm:px-6 py-3">Employee</th>
+                    <th className="px-4 sm:px-6 py-3">Event Type</th>
+                    <th className="px-4 sm:px-6 py-3">Time Rule Classification</th>
+                    <th className="px-4 sm:px-6 py-3">Timestamp</th>
+                    <th className="px-4 sm:px-6 py-3">Neural Confidence</th>
+                    <th className="px-4 sm:px-6 py-3">Liveness Verification</th>
+                    <th className="px-4 sm:px-6 py-3 text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {events.map((e) => {
+                    const emp = e.employees as { full_name: string; employee_code: string } | null;
+                    const name = emp?.full_name ?? "Unknown Employee";
+                    const code = emp?.employee_code ?? "—";
+                    const isCheckIn = e.kind === "check_in";
+                    const isCheckOut = e.kind === "check_out";
+                    const classification = computeEventClassification(e.occurred_at, e.kind);
+
+                    return (
+                      <tr key={e.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-3.5">
+                          <div className="flex items-center gap-3">
+                            <Avatar name={name} size="sm" />
+                            <div>
+                              <span className="font-semibold text-slate-900 block text-sm">{name}</span>
+                              <span className="font-mono text-xs text-indigo-700 font-bold">{code}</span>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <Badge
-                          tone={isCheckIn ? "success" : isCheckOut ? "primary" : "warning"}
-                          size="sm"
-                        >
-                          {e.kind.replace("_", " ").toUpperCase()}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-3.5">
-                        {isCheckIn ? (
+                        </td>
+                        <td className="px-6 py-3.5">
+                          <Badge
+                            tone={isCheckIn ? "success" : isCheckOut ? "primary" : "warning"}
+                            size="sm"
+                          >
+                            {e.kind.replace("_", " ").toUpperCase()}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-3.5">
                           <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${
-                              lateness.isLate
-                                ? "bg-amber-50 text-amber-800 border-amber-200"
-                                : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border ${
+                              classification.tone === "success"
+                                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                : classification.tone === "warning"
+                                  ? "bg-amber-50 text-amber-800 border-amber-200"
+                                  : classification.tone === "primary"
+                                    ? "bg-indigo-50 text-indigo-800 border-indigo-200"
+                                    : "bg-rose-50 text-rose-800 border-rose-200"
                             }`}
                           >
-                            {lateness.label}
+                            {classification.label}
                           </span>
-                        ) : (
-                          <span className="text-xs text-slate-400">—</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-3.5 font-mono text-xs text-slate-600">
-                        {new Date(e.occurred_at).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          second: "2-digit",
-                        })}
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 h-1.5 rounded-full bg-slate-200 overflow-hidden">
-                            <div
-                              className="h-full bg-indigo-600 rounded-full"
-                              style={{
-                                width: `${Math.min(100, Math.round((e.confidence ?? 0.8) * 100))}%`,
-                              }}
-                            />
+                        </td>
+                        <td className="px-6 py-3.5 font-mono text-xs text-slate-600">
+                          {new Date(e.occurred_at).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                          })}
+                        </td>
+                        <td className="px-6 py-3.5">
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                              <div
+                                className="h-full bg-indigo-600 rounded-full"
+                                style={{
+                                  width: `${Math.min(100, Math.round((e.confidence ?? 0.8) * 100))}%`,
+                                }}
+                              />
+                            </div>
+                            <span className="font-mono text-xs text-indigo-700 font-semibold">
+                              {e.confidence != null ? `${Math.round(e.confidence * 100)}%` : "—"}
+                            </span>
                           </div>
-                          <span className="font-mono text-xs text-indigo-700 font-semibold">
-                            {e.confidence != null ? `${Math.round(e.confidence * 100)}%` : "—"}
+                        </td>
+                        <td className="px-6 py-3.5">
+                          <div className="flex items-center gap-1.5 text-xs text-emerald-700">
+                            <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                            <span className="font-medium">
+                              {e.liveness_score != null
+                                ? `${Math.round(e.liveness_score * 100)}% Verified`
+                                : "Active OK"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-3.5 text-right">
+                          <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                            Verified
                           </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <div className="flex items-center gap-1.5 text-xs text-emerald-700">
-                          <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-                          <span className="font-medium">
-                            {e.liveness_score != null
-                              ? `${Math.round(e.liveness_score * 100)}% Verified`
-                              : "Active OK"}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-3.5 text-right">
-                        <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                          Verified
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Panel>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Panel>
+      )}
+
+      {/* TAB 2: Analytics & Animated Visual Charts */}
+      {activeTab === "analytics" && (
+        <div className="animate-in fade-in duration-200">
+          <AttendanceCharts
+            events={data?.events ?? []}
+            departments={data?.departments ?? []}
+            activeEmployeesCount={data?.active ?? 0}
+          />
+        </div>
+      )}
+
+      {/* TAB 3: Monthly HR & Payroll Reporting Tool */}
+      {activeTab === "monthly" && (
+        <div className="animate-in fade-in duration-200">
+          <MonthlyReportViewer />
+        </div>
+      )}
     </div>
   );
 }

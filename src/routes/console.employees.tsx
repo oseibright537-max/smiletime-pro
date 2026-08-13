@@ -15,12 +15,17 @@ import {
   Shield,
   Layers,
   Download,
+  FileSpreadsheet,
+  UploadCloud,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge, Button, Field, Input, Panel, Select, Avatar } from "@/components/ui/primitives";
+import { BulkEnrollmentModal } from "@/components/employees/BulkEnrollmentModal";
+import { DeleteEmployeeModal } from "@/components/employees/DeleteEmployeeModal";
+import { downloadCsvBlob, generateCsvString } from "@/lib/export/downloader";
 
 export const Route = createFileRoute("/console/employees")({ component: Employees });
 
@@ -46,6 +51,15 @@ function Employees() {
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("all");
   const [isAdding, setIsAdding] = useState(false);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState<{
+    id: string;
+    full_name: string;
+    employee_code: string;
+    job_title?: string | null;
+    department_name?: string | null;
+    templatesCount?: number;
+  } | null>(null);
 
   const departments = useQuery({
     queryKey: ["departments"],
@@ -124,6 +138,21 @@ function Employees() {
     onError: (e) => toast.error((e as Error).message),
   });
 
+  const deleteEmployee = useMutation({
+    mutationFn: async (employeeId: string) => {
+      const { error } = await supabase.from("employees").delete().eq("id", employeeId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Employee permanently deleted");
+      setEmployeeToDelete(null);
+      qc.invalidateQueries({ queryKey: ["employees"] });
+      qc.invalidateQueries({ queryKey: ["overview"] });
+      qc.invalidateQueries({ queryKey: ["report_employees"] });
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
   const filteredEmployees = (employees.data ?? []).filter((e) => {
     const matchesSearch =
       e.full_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -145,38 +174,32 @@ function Employees() {
       "Status",
       "Enrolled Templates",
     ];
-    const csvRows = list.map((e) => {
+    const rows = list.map((e) => {
       const dept = (e.departments as { name: string } | null)?.name ?? "Unassigned";
       return [
-        `"${e.employee_code}"`,
-        `"${e.full_name.replace(/"/g, '""')}"`,
-        `"${e.email ?? ""}"`,
-        `"${(e.job_title ?? "").replace(/"/g, '""')}"`,
-        `"${dept.replace(/"/g, '""')}"`,
-        `"${e.status.toUpperCase()}"`,
-        `"${e.templates}"`,
-      ].join(",");
+        e.employee_code,
+        e.full_name,
+        e.email ?? "",
+        e.job_title ?? "",
+        dept,
+        e.status.toUpperCase(),
+        e.templates,
+      ];
     });
 
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...csvRows].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute(
-      "download",
+    const csvContent = generateCsvString(headers, rows);
+    downloadCsvBlob(
       `facetime_workforce_directory_${new Date().toISOString().slice(0, 10)}.csv`,
+      csvContent,
     );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* Header */}
-      <div className="flex flex-wrap items-end justify-between gap-4 pb-4 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 font-display">
               Workforce Directory
             </h1>
@@ -184,32 +207,51 @@ function Employees() {
               {employees.data?.length ?? 0} TOTAL
             </Badge>
           </div>
-          <p className="mt-1 text-sm text-slate-500">
-            Register employees, upload portrait photos, or take live snapshots for instant attendance.
+          <p className="mt-1 text-xs sm:text-sm text-slate-500">
+            Register employees, upload master HR rosters, or enrol facial profiles for instant attendance.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <Button
             variant="outline"
             size="sm"
             onClick={exportDirectoryCsv}
             disabled={(employees.data?.length ?? 0) === 0}
             icon={<Download className="h-4 w-4 text-indigo-600" />}
+            className="flex-1 sm:flex-none justify-center"
           >
             Export Directory CSV
           </Button>
           {isStaff && (
-            <Button
-              size="sm"
-              onClick={() => setIsAdding(!isAdding)}
-              icon={<UserPlus className="h-4 w-4" />}
-            >
-              {isAdding ? "Close Form" : "New Employee"}
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsBulkModalOpen(true)}
+                icon={<FileSpreadsheet className="h-4 w-4 text-indigo-600" />}
+                className="flex-1 sm:flex-none justify-center"
+              >
+                Bulk Ingest Roster
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setIsAdding(!isAdding)}
+                icon={<UserPlus className="h-4 w-4" />}
+                className="w-full sm:w-auto justify-center"
+              >
+                {isAdding ? "Close Form" : "New Employee"}
+              </Button>
+            </>
           )}
         </div>
       </div>
+
+      {/* Bulk Roster Ingestion Modal */}
+      <BulkEnrollmentModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+      />
 
       {/* Add Employee Form Drawer */}
       {isStaff && isAdding && (
@@ -325,31 +367,31 @@ function Employees() {
       {/* Directory Table Panel */}
       <Panel className="p-0 overflow-hidden border border-slate-200 bg-white rounded-2xl shadow-sm">
         {/* Table Header & Search Filter */}
-        <div className="border-b border-slate-200 px-6 py-4 flex flex-wrap items-center justify-between gap-4 bg-slate-50/70">
+        <div className="border-b border-slate-200 px-4 sm:px-6 py-3.5 sm:py-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/70">
           <div>
-            <h2 className="text-base font-bold text-slate-900 tracking-tight font-display">
+            <h2 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight font-display">
               Employee Directory
             </h2>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-slate-500 block mt-0.5">
               Face templates are irreversible mathematical vectors stored in PostgreSQL.
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="relative w-48 sm:w-64">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
+            <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <Input
                 placeholder="Search by name, code, role..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 h-9 text-xs"
+                className="pl-9 h-9 text-xs w-full"
               />
             </div>
 
             <select
               value={deptFilter}
               onChange={(e) => setDeptFilter(e.target.value)}
-              className="h-9 rounded-xl border border-slate-300 bg-white px-3 text-xs text-slate-800 focus:border-indigo-600 focus:outline-none"
+              className="h-9 rounded-xl border border-slate-300 bg-white px-3 text-xs text-slate-800 focus:border-indigo-600 focus:outline-none cursor-pointer shrink-0"
             >
               <option value="all">All Departments</option>
               {(departments.data ?? []).map((d) => (
@@ -390,15 +432,15 @@ function Employees() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-100/70 text-xs font-semibold uppercase tracking-wider text-slate-600 font-display">
+            <table className="w-full text-left text-xs sm:text-sm min-w-[700px]">
+              <thead className="border-b border-slate-200 bg-slate-100/70 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 font-display">
                 <tr>
-                  <th className="px-6 py-3">Code</th>
-                  <th className="px-6 py-3">Employee</th>
-                  <th className="px-6 py-3">Department</th>
-                  <th className="px-6 py-3">Status</th>
-                  <th className="px-6 py-3">Biometric Profile</th>
-                  <th className="px-6 py-3 text-right">Actions</th>
+                  <th className="px-4 sm:px-6 py-3">Code</th>
+                  <th className="px-4 sm:px-6 py-3">Employee</th>
+                  <th className="px-4 sm:px-6 py-3">Department</th>
+                  <th className="px-4 sm:px-6 py-3">Status</th>
+                  <th className="px-4 sm:px-6 py-3">Biometric Profile</th>
+                  <th className="px-4 sm:px-6 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -445,7 +487,7 @@ function Employees() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-1.5">
                           <Link to="/console/enroll/$employeeId" params={{ employeeId: e.id }}>
                             <Button
                               size="xs"
@@ -456,16 +498,21 @@ function Employees() {
                             </Button>
                           </Link>
 
-                          {isStaff && hasTemplates && (
+                          {isStaff && (
                             <Button
                               size="xs"
                               variant="ghost"
                               onClick={() => {
-                                if (confirm(`Clear face templates for ${e.full_name}?`)) {
-                                  resetFace.mutate(e.id);
-                                }
+                                setEmployeeToDelete({
+                                  id: e.id,
+                                  full_name: e.full_name,
+                                  employee_code: e.employee_code,
+                                  job_title: e.job_title,
+                                  department_name: (e.departments as { name: string } | null)?.name,
+                                  templatesCount: e.templates,
+                                });
                               }}
-                              title="Reset face templates"
+                              title="Delete employee profile"
                               className="text-slate-400 hover:text-rose-600 hover:bg-rose-50"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -481,6 +528,19 @@ function Employees() {
           </div>
         )}
       </Panel>
+
+      {/* Delete Employee Confirmation Modal */}
+      <DeleteEmployeeModal
+        isOpen={Boolean(employeeToDelete)}
+        onClose={() => setEmployeeToDelete(null)}
+        onConfirm={() => {
+          if (employeeToDelete?.id) {
+            deleteEmployee.mutate(employeeToDelete.id);
+          }
+        }}
+        loading={deleteEmployee.isPending}
+        employee={employeeToDelete}
+      />
     </div>
   );
 }

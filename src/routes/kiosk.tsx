@@ -14,6 +14,10 @@ import {
   XCircle,
   RefreshCw,
   UserCheck,
+  SwitchCamera,
+  Sliders,
+  AlertTriangle,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,6 +35,12 @@ import {
 import { Badge, Button, Panel } from "@/components/ui/primitives";
 import { Logo } from "@/components/ui/logo";
 import { biometricAudio } from "@/lib/face/audio";
+import {
+  checkAttendanceRules,
+  evaluateTimeWindow,
+  type AttendanceStatus,
+} from "@/lib/attendance/time-windows";
+import { TimeWindowBanner } from "@/components/attendance/TimeWindowBanner";
 
 export const Route = createFileRoute("/kiosk")({
   head: () => ({
@@ -38,7 +48,7 @@ export const Route = createFileRoute("/kiosk")({
       { title: "High-Speed Attendance Kiosk Terminal" },
       {
         name: "description",
-        content: "Instant facial recognition attendance terminal for workforce sign-in.",
+        content: "Instant facial recognition attendance terminal with automated shift window enforcement.",
       },
     ],
   }),
@@ -47,8 +57,8 @@ export const Route = createFileRoute("/kiosk")({
 
 type Kind = "check_in" | "check_out" | "break_start" | "break_end";
 
-/** Optimal cosine-distance threshold for FaceNet-128 (0.46 accommodates normal lighting variance) */
-const DEFAULT_MATCH_THRESHOLD = 0.46;
+/** Cosine distance threshold for FaceNet-128 (0.52 accommodates phone cameras, lighting, & laptops) */
+const DEFAULT_MATCH_THRESHOLD = 0.52;
 /** Same employee cannot log the same event kind twice within this window */
 const DUPLICATE_WINDOW_MS = 45_000;
 
@@ -63,17 +73,28 @@ const KIND_LABELS: Record<Kind, { label: string; tone: "success" | "primary" | "
 
 function Kiosk() {
   const { user, loading } = useAuth();
-  const { videoRef, start, stop, active, error } = useCamera();
+  const { videoRef, start, stop, active, error, facingMode, flipCamera } = useCamera();
   const [modelsReady, setModelsReady] = useState(false);
   const [kind, setKind] = useState<Kind>("check_in");
   const [phase, setPhase] = useState<Phase>("idle");
-  const [hint, setHint] = useState("Position your face in front of the camera");
+  const [hint, setHint] = useState("Looking for face in camera view…");
   const [time, setTime] = useState("");
   const [matchThreshold, setMatchThreshold] = useState(DEFAULT_MATCH_THRESHOLD);
   const [enrolledTemplates, setEnrolledTemplates] = useState<EnrolledCandidate[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [bypassShiftRules, setBypassShiftRules] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [detectedBox, setDetectedBox] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+
   const [recentScans, setRecentScans] = useState<
-    Array<{ id: string; name: string; kind: Kind; time: string; success: boolean }>
+    Array<{
+      id: string;
+      name: string;
+      kind: Kind;
+      time: string;
+      success: boolean;
+      statusLabel?: string;
+    }>
   >([]);
 
   const [result, setResult] = useState<{
@@ -83,6 +104,8 @@ function Kiosk() {
     message: string;
     confidence?: number;
     distance?: number;
+    statusLabel?: string;
+    statusTone?: "success" | "warning" | "primary" | "danger" | "neutral";
   } | null>(null);
 
   const busyRef = useRef(false);
@@ -119,7 +142,7 @@ function Kiosk() {
       const parsed: EnrolledCandidate[] = [];
       for (const row of data ?? []) {
         const emp = row.employees as { id: string; full_name: string; employee_code: string; status: string } | null;
-        if (emp && emp.status === "active") {
+        if (emp && (!emp.status || emp.status === "active")) {
           const vec = parseVectorLiteral(row.embedding);
           if (vec) {
             parsed.push({
@@ -148,6 +171,13 @@ function Kiosk() {
       .catch(() => toast.error("Could not load neural face recognition models"));
   }, [loadTemplates]);
 
+  // Attempt auto-start when models are ready and user is authenticated
+  useEffect(() => {
+    if (modelsReady && !active && !error && user) {
+      void start();
+    }
+  }, [modelsReady, active, error, user, start]);
+
   const finish = useCallback(
     (payload: NonNullable<typeof result>) => {
       setResult(payload);
@@ -169,17 +199,19 @@ function Kiosk() {
           kind: kindRef.current,
           time: nowStr,
           success: payload.ok,
+          statusLabel: payload.statusLabel,
         },
         ...prev.slice(0, 7),
       ]);
 
-      // Reset after 3 seconds so the scanner is ready for the next person
+      // Reset after 3.2 seconds so the scanner is ready for the next person
       setTimeout(() => {
         setResult(null);
+        setDetectedBox(null);
         unrecognizedFramesCount.current = 0;
         busyRef.current = false;
         setPhase("searching");
-      }, 3000);
+      }, 3200);
     },
     [],
   );
@@ -190,7 +222,7 @@ function Kiosk() {
       if (busyRef.current) return;
       busyRef.current = true;
       setPhase("matching");
-      setHint("Scanning and matching facial profile…");
+      setHint("Matching face against enrolled workforce…");
 
       try {
         let matchEmployeeId: string | null = null;
@@ -230,11 +262,15 @@ function Kiosk() {
         // NO MATCH FOUND
         if (!matchEmployeeId || bestDistance > matchThreshold) {
           unrecognizedFramesCount.current += 1;
-          if (unrecognizedFramesCount.current >= 3) {
+          if (unrecognizedFramesCount.current >= 2) {
             finish({
               ok: false,
               message:
-                "No matching enrolled face found. Please contact HR or enroll your face first to clock in.",
+                enrolledTemplates.length === 0
+                  ? "No facial templates enrolled in system. Please enrol at least one employee in Console > Employees."
+                  : "No matching enrolled profile found. Please ensure you are enrolled with good lighting.",
+              statusLabel: "Unknown Face",
+              statusTone: "danger",
             });
           } else {
             busyRef.current = false;
@@ -245,6 +281,22 @@ function Kiosk() {
 
         // Reset unrecognized counter
         unrecognizedFramesCount.current = 0;
+
+        // 3. TIME-WINDOW & ATTENDANCE RULE VALIDATION
+        const now = new Date();
+        const ruleCheck = checkAttendanceRules(kindRef.current, now);
+
+        if (!ruleCheck.allowed && !bypassShiftRules) {
+          finish({
+            ok: false,
+            name: matchFullName,
+            employeeCode: matchEmployeeCode,
+            message: ruleCheck.reason || "This clock action is restricted during current shift hours.",
+            statusLabel: ruleCheck.statusLabel,
+            statusTone: "danger",
+          });
+          return;
+        }
 
         // DUPLICATE PREVENTER (within 45s)
         const since = new Date(Date.now() - DUPLICATE_WINDOW_MS).toISOString();
@@ -262,16 +314,23 @@ function Kiosk() {
             name: matchFullName,
             employeeCode: matchEmployeeCode,
             message: `${matchFullName} already logged ${KIND_LABELS[kindRef.current].label} within the last minute.`,
+            statusLabel: "Duplicate Scan Ignored",
+            statusTone: "warning",
           });
           return;
         }
 
-        const confidence = Math.max(0.7, Math.min(0.99, 1 - bestDistance * 0.65));
+        const confidence = Math.max(0.75, Math.min(0.99, 1 - bestDistance * 0.55));
+        const localDateStr = now.toISOString().slice(0, 10);
+        const finalStatus = bypassShiftRules ? "normal" : ruleCheck.status;
+        const finalStatusLabel = bypassShiftRules ? "Verified (Test Mode)" : ruleCheck.statusLabel;
 
-        // INSERT ATTENDANCE EVENT INTO SUPABASE
+        // INSERT ATTENDANCE EVENT INTO SUPABASE WITH STATUS
         const { error: insertError } = await supabase.from("attendance_events").insert({
           employee_id: matchEmployeeId,
           kind: kindRef.current,
+          status: finalStatus,
+          local_date: localDateStr,
           confidence,
           liveness_score: 0.98,
           device_label: "FaceTime Attendance Terminal",
@@ -289,6 +348,8 @@ function Kiosk() {
           message: `${KIND_LABELS[kindRef.current].label} recorded successfully.`,
           confidence,
           distance: bestDistance,
+          statusLabel: finalStatusLabel,
+          statusTone: ruleCheck.isLate && !bypassShiftRules ? "warning" : "success",
         });
       } catch (err) {
         finish({
@@ -297,7 +358,7 @@ function Kiosk() {
         });
       }
     },
-    [enrolledTemplates, finish, matchThreshold],
+    [enrolledTemplates, finish, matchThreshold, bypassShiftRules],
   );
 
   // Real-time automatic scanner loop
@@ -310,14 +371,16 @@ function Kiosk() {
     const tick = async () => {
       if (!loopRef.current) return;
       const video = videoRef.current;
-      if (video && !busyRef.current && Date.now() - lastScanTimeRef.current > 1500) {
+      if (video && !busyRef.current && Date.now() - lastScanTimeRef.current > 1200) {
         try {
-          const sample = await analyseFrame(video, { scoreThreshold: 0.32, inputSize: 320 });
+          const sample = await analyseFrame(video, { scoreThreshold: 0.24, inputSize: 320 });
           if (!sample) {
+            setDetectedBox(null);
             setHint("Looking for face in camera view…");
             setPhase("searching");
           } else {
-            setHint("Face detected · Scanning identity…");
+            setDetectedBox(sample.box);
+            setHint("Face detected · Verifying identity…");
             await processFaceDescriptor(sample.descriptor);
           }
         } catch {
@@ -338,11 +401,13 @@ function Kiosk() {
   const handleManualScan = async () => {
     if (!videoRef.current) return;
     try {
-      const sample = await analyseFrame(videoRef.current, { scoreThreshold: 0.28, inputSize: 416 });
+      toast.info("Scanning camera frame…");
+      const sample = await analyseFrame(videoRef.current, { scoreThreshold: 0.22, inputSize: 416 });
       if (!sample) {
-        toast.error("No face visible in camera. Look directly at the lens.");
+        toast.error("No face visible in camera. Please face the camera directly with good lighting.");
         return;
       }
+      setDetectedBox(sample.box);
       await processFaceDescriptor(sample.descriptor);
     } catch (err) {
       toast.error((err as Error).message);
@@ -378,53 +443,137 @@ function Kiosk() {
   return (
     <main className="hero-surface min-h-screen flex flex-col justify-between selection:bg-indigo-500/20 selection:text-indigo-900">
       {/* Top Kiosk Header Bar */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs px-6 py-3">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <Link
-            to="/console"
-            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg border border-slate-200"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to Console
-          </Link>
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs px-3 sm:px-6 py-2.5 sm:py-3">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link
+              to="/console"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors bg-slate-100 hover:bg-slate-200 px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-200"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" /> <span className="hidden xs:inline">Back to</span> Console
+            </Link>
 
-          <Link to="/" className="group">
-            <Logo size="sm" subtitle="Attendance Terminal" />
-          </Link>
+            <Link to="/" className="group hidden sm:block">
+              <Logo size="sm" subtitle="Attendance Terminal" />
+            </Link>
+          </div>
 
-          <div className="flex items-center gap-3 font-mono text-xs">
-            <div className="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg text-indigo-700 font-bold">
+          {/* Real-Time Shift Window Indicator */}
+          <div className="hidden md:block">
+            <TimeWindowBanner compact={true} showRulesGuide={false} />
+          </div>
+
+          <div className="flex items-center gap-2 font-mono text-xs">
+            <div className="bg-slate-100 border border-slate-200 px-2.5 sm:px-3 py-1.5 rounded-lg text-indigo-700 font-bold">
               {time || "00:00:00"}
             </div>
-            <Badge tone="success" pulse size="sm">
-              LIVE SCANNER
+            <Badge tone={active ? "success" : "warning"} pulse={active} size="sm">
+              {active ? "LIVE" : "READY"}
             </Badge>
+
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 transition-colors"
+              title="Terminal Settings & Diagnostics"
+            >
+              <Sliders className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
+
+        {/* Terminal Controls Drawer */}
+        {showSettings && (
+          <div className="border-t border-slate-200 mt-2.5 pt-3 pb-2 px-1 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs animate-in slide-in-from-top-2 duration-150">
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+              <div>
+                <span className="font-bold text-slate-800 block">Enrolled Faces in Cache</span>
+                <span className="text-[11px] text-slate-500">{enrolledTemplates.length} biometric templates loaded</span>
+              </div>
+              <button
+                onClick={() => void loadTemplates()}
+                className="p-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100"
+                title="Reload vector templates"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 text-indigo-600 ${loadingTemplates ? "animate-spin" : ""}`} />
+              </button>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-bold text-slate-800">Match Tolerance</span>
+                <span className="font-mono text-indigo-600 font-semibold">{matchThreshold}</span>
+              </div>
+              <input
+                type="range"
+                min="0.40"
+                max="0.65"
+                step="0.02"
+                value={matchThreshold}
+                onChange={(e) => setMatchThreshold(parseFloat(e.target.value))}
+                className="w-full h-1.5 bg-slate-200 rounded-lg accent-indigo-600 cursor-pointer"
+              />
+              <span className="text-[10px] text-slate-400 block mt-0.5">Higher = More lenient lighting match</span>
+            </div>
+
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+              <div>
+                <span className="font-bold text-slate-800 block">Shift Rule Override</span>
+                <span className="text-[11px] text-slate-500">Allow clock actions 24/7 for testing</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={bypassShiftRules}
+                onChange={(e) => setBypassShiftRules(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+              />
+            </div>
+          </div>
+        )}
       </header>
 
+      {/* No Enrolled Templates Warning Banner */}
+      {enrolledTemplates.length === 0 && !loadingTemplates && (
+        <div className="mx-auto max-w-6xl w-full px-3 sm:px-6 pt-3">
+          <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-950">
+            <div className="flex items-center gap-2.5">
+              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+              <span>
+                <strong>No facial profiles enrolled yet.</strong> Go to the Employee Directory to enrol your first face before testing attendance.
+              </span>
+            </div>
+            <Link to="/console/employees" className="shrink-0 w-full sm:w-auto">
+              <Button size="xs" variant="outline" className="w-full justify-center bg-white border-amber-300 text-amber-900">
+                Go to Face Enrollment
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Main Terminal Station */}
-      <section className="mx-auto max-w-6xl w-full px-4 sm:px-6 py-6 flex-1 grid lg:grid-cols-4 gap-6 items-center">
+      <section className="mx-auto max-w-6xl w-full px-3 sm:px-6 py-4 sm:py-6 flex-1 grid lg:grid-cols-4 gap-4 sm:gap-6 items-start lg:items-center">
         {/* Left 3 Cols: Camera Viewfinder & Result Card */}
         <div className="lg:col-span-3">
           <Panel className="p-0 overflow-hidden border border-slate-200 bg-white relative shadow-lg rounded-2xl">
             {/* Camera Viewfinder */}
-            <div className="relative aspect-video bg-slate-950 flex items-center justify-center">
+            <div className="relative aspect-[4/3] sm:aspect-video bg-slate-950 flex items-center justify-center overflow-hidden">
               <video
                 ref={videoRef}
                 playsInline
+                autoPlay
                 muted
                 className="h-full w-full scale-x-[-1] object-cover"
               />
 
               {/* Corner HUD Brackets */}
-              <div className="absolute inset-8 pointer-events-none z-10 flex flex-col justify-between">
+              <div className="absolute inset-4 sm:inset-8 pointer-events-none z-10 flex flex-col justify-between">
                 <div className="flex justify-between">
-                  <div className="w-8 h-8 border-t-2 border-l-2 border-indigo-400/80" />
-                  <div className="w-8 h-8 border-t-2 border-r-2 border-indigo-400/80" />
+                  <div className="w-6 sm:w-8 h-6 sm:h-8 border-t-2 border-l-2 border-indigo-400/80" />
+                  <div className="w-6 sm:w-8 h-6 sm:h-8 border-t-2 border-r-2 border-indigo-400/80" />
                 </div>
                 <div className="flex justify-between">
-                  <div className="w-8 h-8 border-b-2 border-l-2 border-indigo-400/80" />
-                  <div className="w-8 h-8 border-b-2 border-r-2 border-indigo-400/80" />
+                  <div className="w-6 sm:w-8 h-6 sm:h-8 border-b-2 border-l-2 border-indigo-400/80" />
+                  <div className="w-6 sm:w-8 h-6 sm:h-8 border-b-2 border-r-2 border-indigo-400/80" />
                 </div>
               </div>
 
@@ -433,13 +582,13 @@ function Kiosk() {
                 <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-indigo-400 to-transparent shadow-[0_0_15px_#818cf8] animate-scanline z-20" />
               )}
 
-              {/* Idle State Start Prompt */}
+              {/* Idle / Inactive State Start Prompt */}
               {!active && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-center p-8 bg-slate-950/90 backdrop-blur-md z-30">
-                  <div className="h-16 w-16 rounded-3xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-400 shadow-lg">
-                    <Camera className="h-8 w-8" />
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 sm:gap-4 text-center p-4 sm:p-8 bg-slate-950/90 backdrop-blur-md z-30">
+                  <div className="h-14 sm:h-16 w-14 sm:w-16 rounded-2xl sm:rounded-3xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-400 shadow-lg">
+                    <Camera className="h-7 sm:h-8 w-7 sm:w-8" />
                   </div>
-                  <h2 className="text-2xl font-bold text-white font-display">
+                  <h2 className="text-xl sm:text-2xl font-bold text-white font-display">
                     Terminal Scanner Ready
                   </h2>
                   <p className="max-w-md text-xs text-slate-300 leading-relaxed">
@@ -447,11 +596,12 @@ function Kiosk() {
                       "Fast biometric recognition. Look at the camera to clock in or out instantly."}
                   </p>
                   <Button
-                    size="xl"
+                    size="lg"
                     onClick={() => void start()}
                     disabled={!modelsReady}
                     loading={!modelsReady}
-                    icon={<ScanFace className="h-6 w-6" />}
+                    icon={<ScanFace className="h-5 w-5" />}
+                    className="w-full sm:w-auto"
                   >
                     {modelsReady ? "Activate Terminal Scanner" : "Loading Neural Models…"}
                   </Button>
@@ -460,11 +610,15 @@ function Kiosk() {
 
               {/* Active Real-Time Scanner Overlay */}
               {active && !result && (
-                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-between p-6 z-20">
-                  <div className="rounded-full bg-slate-950/80 border border-white/15 px-4 py-1.5 text-xs uppercase tracking-widest font-mono text-indigo-300 backdrop-blur-md">
-                    {phase === "matching" ? "Matching Identity…" : "Scanner Active"}
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-between p-4 sm:p-6 z-20">
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-full bg-slate-950/80 border border-white/15 px-3 py-1 text-[10px] sm:text-xs uppercase tracking-widest font-mono text-indigo-300 backdrop-blur-md flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                      {phase === "matching" ? "Matching Identity…" : "Scanner Active"}
+                    </div>
                   </div>
-                  <div className="rounded-2xl bg-slate-950/90 border border-white/20 px-6 py-3 text-center text-base sm:text-lg font-bold text-white shadow-2xl backdrop-blur-xl">
+
+                  <div className="rounded-2xl bg-slate-950/90 border border-white/20 px-4 sm:px-6 py-2 sm:py-3 text-center text-sm sm:text-base font-bold text-white shadow-2xl backdrop-blur-xl max-w-[90%] break-words">
                     {hint}
                   </div>
                 </div>
@@ -472,22 +626,22 @@ function Kiosk() {
 
               {/* Recognition Result Modal Overlay */}
               {result && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-slate-950/95 p-8 text-center backdrop-blur-2xl z-30 animate-in fade-in zoom-in-95 duration-200">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 sm:gap-4 bg-slate-950/95 p-4 sm:p-8 text-center backdrop-blur-2xl z-30 animate-in fade-in zoom-in-95 duration-200">
                   <div
-                    className={`h-20 w-20 rounded-3xl flex items-center justify-center shadow-2xl ${
+                    className={`h-16 sm:h-20 w-16 sm:w-20 rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-2xl ${
                       result.ok
                         ? "bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 shadow-emerald-500/30"
                         : "bg-rose-500/20 border-2 border-rose-400 text-rose-400 shadow-rose-500/30"
                     }`}
                   >
                     {result.ok ? (
-                      <CheckCircle2 className="h-10 w-10" />
+                      <CheckCircle2 className="h-8 sm:h-10 w-8 sm:w-10" />
                     ) : (
-                      <XCircle className="h-10 w-10" />
+                      <XCircle className="h-8 sm:h-10 w-8 sm:w-10" />
                     )}
                   </div>
 
-                  <h2 className="font-display text-3xl sm:text-4xl font-bold text-white">
+                  <h2 className="font-display text-2xl sm:text-4xl font-bold text-white break-words max-w-full px-2">
                     {result.name ?? (result.ok ? "Face Verified" : "Access Denied")}
                   </h2>
 
@@ -497,36 +651,46 @@ function Kiosk() {
                     </span>
                   )}
 
-                  <p className="text-sm font-medium text-slate-300 max-w-md">{result.message}</p>
+                  <p className="text-xs sm:text-sm font-medium text-slate-300 max-w-md px-2 leading-relaxed">
+                    {result.message}
+                  </p>
 
-                  {result.ok && (
-                    <div className="flex flex-wrap justify-center gap-3 pt-2">
+                  <div className="flex flex-wrap justify-center gap-2 sm:gap-3 pt-1 sm:pt-2">
+                    {result.ok && (
                       <Badge tone="success" size="md">
                         MATCH: {Math.round((result.confidence ?? 0.95) * 100)}%
                       </Badge>
-                      <Badge tone="primary" size="md">
-                        {KIND_LABELS[kindRef.current].label.toUpperCase()}
+                    )}
+                    {result.statusLabel && (
+                      <Badge
+                        tone={result.statusTone || (result.ok ? "success" : "danger")}
+                        size="md"
+                      >
+                        {result.statusLabel.toUpperCase()}
                       </Badge>
-                    </div>
-                  )}
+                    )}
+                    <Badge tone="primary" size="md">
+                      {KIND_LABELS[kindRef.current].label.toUpperCase()}
+                    </Badge>
+                  </div>
                 </div>
               )}
             </div>
 
             {/* Bottom Event Selector Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-200 bg-slate-50 px-6 py-4">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-600 font-display">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-4 sm:px-6 py-3 sm:py-4">
+              <div className="flex flex-col xs:flex-row items-start xs:items-center gap-2 sm:gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-600 font-display shrink-0">
                   Action:
                 </span>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="grid grid-cols-2 xs:flex flex-wrap gap-1.5 w-full xs:w-auto">
                   {(Object.keys(KIND_LABELS) as Kind[]).map((k) => {
                     const isActive = kind === k;
                     return (
                       <button
                         key={k}
                         onClick={() => setKind(k)}
-                        className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer text-center ${
                           isActive
                             ? "bg-indigo-600 text-white shadow-xs"
                             : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-300"
@@ -539,15 +703,30 @@ function Kiosk() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200">
+                {/* Mobile Camera Flip */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void flipCamera()}
+                  icon={<SwitchCamera className="h-3.5 w-3.5 text-slate-600" />}
+                  title="Switch between front and back camera"
+                >
+                  <span className="hidden xs:inline">Flip</span>
+                </Button>
+
                 {active && (
-                  <Button size="sm" onClick={() => void handleManualScan()} icon={<Zap className="h-3.5 w-3.5" />}>
+                  <Button size="sm" onClick={() => void handleManualScan()} icon={<Zap className="h-3.5 w-3.5" />} className="flex-1 sm:flex-none justify-center">
                     Scan Now
                   </Button>
                 )}
-                {active && (
-                  <Button variant="outline" size="sm" onClick={stop}>
+                {active ? (
+                  <Button variant="outline" size="sm" onClick={stop} className="flex-1 sm:flex-none justify-center">
                     Stop Scanner
+                  </Button>
+                ) : (
+                  <Button size="sm" onClick={() => void start()} icon={<Camera className="h-3.5 w-3.5" />} className="flex-1 sm:flex-none justify-center">
+                    Start Scanner
                   </Button>
                 )}
               </div>
@@ -557,7 +736,7 @@ function Kiosk() {
 
         {/* Right 1 Col: Recent Kiosk Scans Activity Stream */}
         <div className="space-y-4">
-          <Panel className="border border-slate-200 bg-white shadow-sm rounded-2xl p-5">
+          <Panel className="border border-slate-200 bg-white shadow-sm rounded-2xl p-4 sm:p-5">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <h3 className="text-sm font-bold text-slate-900 font-display flex items-center gap-2">
                 <Activity className="h-4 w-4 text-indigo-600" />
@@ -595,35 +774,20 @@ function Kiosk() {
                       </span>
                     </div>
                     <div className="text-right">
-                      <span className="font-mono text-[10px] text-slate-500 block">{s.time}</span>
-                      <span
-                        className={`text-[9px] font-bold uppercase ${s.success ? "text-emerald-700" : "text-rose-700"}`}
-                      >
-                        {s.success ? "Passed" : "Denied"}
-                      </span>
+                      <span className="font-mono text-[10px] text-slate-400 block">{s.time}</span>
+                      {s.statusLabel && (
+                        <span className="text-[9px] font-bold uppercase tracking-wider block">
+                          {s.statusLabel}
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
             )}
           </Panel>
-
-          <Panel className="p-4 border border-slate-200 bg-slate-50 text-xs text-slate-600 space-y-1.5 rounded-2xl">
-            <div className="flex items-center gap-1.5 text-slate-900 font-semibold">
-              <Lock className="h-3.5 w-3.5 text-indigo-600" />
-              <span>Biometric Security</span>
-            </div>
-            <p className="text-[11px] leading-relaxed text-slate-500">
-              Instant vector matching. Unrecognized faces are strictly rejected and cannot clock in.
-            </p>
-          </Panel>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="border-t border-slate-200 py-3 text-center text-xs text-slate-500 bg-white">
-        FaceTime Attendance · Zero Photo Upload Architecture
-      </footer>
     </main>
   );
 }
