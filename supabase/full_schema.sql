@@ -274,8 +274,13 @@ CREATE POLICY "attendance insertable" ON public.attendance_events
   FOR INSERT TO authenticated
   WITH CHECK (true);
 
--- Enable Realtime
-ALTER PUBLICATION supabase_realtime ADD TABLE public.attendance_events;
+-- Enable Realtime safely
+DO $$ BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.attendance_events;
+EXCEPTION
+  WHEN duplicate_object THEN null;
+  WHEN others THEN null;
+END $$;
 
 -- 11. AUTOMATIC COMPANY REGISTRATION TRIGGER
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -286,7 +291,8 @@ DECLARE
 BEGIN
   -- Profile
   INSERT INTO public.profiles (id, full_name)
-  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email));
+  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email))
+  ON CONFLICT (id) DO UPDATE SET full_name = EXCLUDED.full_name;
 
   -- Determine Company Name from signup form metadata
   company_label := COALESCE(
@@ -301,7 +307,8 @@ BEGIN
 
   -- Assign user as Admin of the new company
   INSERT INTO public.organization_members (organization_id, user_id, role)
-  VALUES (new_org_id, NEW.id, 'admin');
+  VALUES (new_org_id, NEW.id, 'admin')
+  ON CONFLICT DO NOTHING;
 
   INSERT INTO public.user_roles (user_id, role)
   VALUES (NEW.id, 'admin')
@@ -316,6 +323,10 @@ BEGIN
   ON CONFLICT DO NOTHING;
 
   RETURN NEW;
+EXCEPTION
+  WHEN others THEN
+    RAISE WARNING 'handle_new_user error: %', SQLERRM;
+    RETURN NEW;
 END;
 $$;
 
@@ -326,6 +337,8 @@ CREATE TRIGGER on_auth_user_created
 
 -- 12. PERMISSIONS
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
-GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated, service_role;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated, service_role;
-GRANT ALL ON ALL ROUTINES IN SCHEMA public TO authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.match_face(text, uuid, double precision) TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.user_belongs_to_org(uuid) TO anon, authenticated, service_role;
