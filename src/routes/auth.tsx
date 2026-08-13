@@ -11,6 +11,8 @@ import {
   User,
   Building,
   Sparkles,
+  Key,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,7 +26,7 @@ export const Route = createFileRoute("/auth")({
       { title: "Authentication — FaceTime Attendance" },
       {
         name: "description",
-        content: "Sign in, register, or recover your password for FaceTime Attendance.",
+        content: "Sign in, register company, or confirm email verification code.",
       },
     ],
   }),
@@ -34,7 +36,7 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
-type AuthMode = "signin" | "signup" | "forgot";
+type AuthMode = "signin" | "signup" | "verify" | "forgot";
 
 function AuthPage() {
   const navigate = useNavigate();
@@ -45,8 +47,10 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [otpCode, setOtpCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [resending, setResending] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -57,6 +61,25 @@ function AuthPage() {
       navigate({ to: target });
     }
   }, [user, navigate, target]);
+
+  // Resend verification code
+  const handleResendOtp = async () => {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) return;
+    setResending(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: cleanEmail,
+      });
+      if (error) throw error;
+      toast.info("A new verification code has been sent to your email.");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setResending(false);
+    }
+  };
 
   // Handle Form Submit
   async function submit(e: React.FormEvent) {
@@ -73,7 +96,6 @@ function AuthPage() {
         });
         if (error) throw error;
         setResetSent(true);
-        toast.success("Password recovery link sent! Check your inbox.");
       } else if (mode === "signup") {
         const { data, error } = await supabase.auth.signUp({
           email: cleanEmail,
@@ -88,15 +110,47 @@ function AuthPage() {
         });
         if (error) throw error;
 
-        // If email already exists in Supabase, identities array is empty
+        // If email already exists in Supabase
         if (data?.user && data.user.identities && data.user.identities.length === 0) {
-          toast.info("This email is already registered. Please sign in below.");
+          setFormError("This email is already registered. Please sign in.");
           setMode("signin");
         } else if (data?.session) {
-          toast.success("Company workspace registered! Welcome to FaceTime Attendance.");
+          // Direct login without email confirmation requirement - NO popup message
           navigate({ to: target });
         } else {
-          toast.success("Company registered! Please check your email to activate your account or sign in.");
+          // Confirmation code required -> switch to verify mode
+          setMode("verify");
+        }
+      } else if (mode === "verify") {
+        // 6-digit confirmation code verification
+        const token = otpCode.trim();
+        let { data, error } = await supabase.auth.verifyOtp({
+          email: cleanEmail,
+          token,
+          type: "signup",
+        });
+
+        // Fallback to type: email or recovery if signup type errors
+        if (error) {
+          const secondAttempt = await supabase.auth.verifyOtp({
+            email: cleanEmail,
+            token,
+            type: "email",
+          });
+          if (!secondAttempt.error) {
+            data = secondAttempt.data;
+            error = null;
+          }
+        }
+
+        if (error) {
+          throw new Error("Invalid or expired verification code. Please check your email or request a new code.");
+        }
+
+        if (data?.session) {
+          // Verified & Logged in - redirect directly with NO message
+          navigate({ to: target });
+        } else {
           setMode("signin");
         }
       } else {
@@ -109,8 +163,9 @@ function AuthPage() {
         if (error) {
           const msg = error.message.toLowerCase();
           if (msg.includes("email not confirmed")) {
+            setMode("verify");
             throw new Error(
-              "Your email has not been confirmed yet. Please check your email inbox for the activation link.",
+              "Your email is not confirmed yet. Enter the 6-digit code sent to your inbox below.",
             );
           }
           if (msg.includes("invalid login credentials")) {
@@ -122,14 +177,13 @@ function AuthPage() {
         }
 
         if (data.session) {
-          toast.success("Signed in successfully");
+          // Direct redirect with NO congratulatory/signed in popup message
           navigate({ to: target });
         }
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Authentication error occurred";
       setFormError(message);
-      toast.error(message);
     } finally {
       setBusy(false);
     }
@@ -143,19 +197,25 @@ function AuthPage() {
           <Link to="/" className="inline-flex items-center gap-3 group">
             <Logo size="lg" subtitle="Biometric Portal" />
           </Link>
+          <p className="text-xs text-slate-500 max-w-sm">
+            AI-powered enterprise facial recognition workforce intelligence & attendance system.
+          </p>
         </div>
 
-        {/* Auth White Card */}
-        <Panel className="p-8 bg-white border border-slate-200 shadow-lg rounded-2xl">
-          {/* Mode Switcher Tabs (Only for signin / signup) */}
-          {mode !== "forgot" && (
-            <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 border border-slate-200 mb-6">
+        {/* Card Form */}
+        <Panel className="bg-white border border-slate-200 shadow-xl rounded-2xl p-6 sm:p-8">
+          {/* Mode Switcher Tabs */}
+          {mode !== "forgot" && mode !== "verify" && (
+            <div className="flex rounded-xl bg-slate-100 p-1 mb-6 border border-slate-200">
               <button
                 type="button"
-                onClick={() => setMode("signin")}
-                className={`rounded-lg py-2.5 text-xs font-bold transition-all cursor-pointer ${
+                onClick={() => {
+                  setMode("signin");
+                  setFormError(null);
+                }}
+                className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all cursor-pointer ${
                   mode === "signin"
-                    ? "bg-white text-slate-900 shadow-sm"
+                    ? "bg-white text-slate-900 shadow-xs"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
@@ -163,14 +223,17 @@ function AuthPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setMode("signup")}
-                className={`rounded-lg py-2.5 text-xs font-bold transition-all cursor-pointer ${
+                onClick={() => {
+                  setMode("signup");
+                  setFormError(null);
+                }}
+                className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all cursor-pointer ${
                   mode === "signup"
-                    ? "bg-white text-slate-900 shadow-sm"
+                    ? "bg-white text-slate-900 shadow-xs"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                Register
+                Register Company
               </button>
             </div>
           )}
@@ -179,17 +242,21 @@ function AuthPage() {
           <div className="space-y-1 mb-6">
             <h1 className="text-xl font-bold text-slate-900 font-display">
               {mode === "signin"
-                ? "Sign in to workspace"
+                ? "Sign in to company workspace"
                 : mode === "signup"
-                  ? "Create administrator account"
-                  : "Reset your password"}
+                  ? "Register new company account"
+                  : mode === "verify"
+                    ? "Confirm your email code"
+                    : "Reset your password"}
             </h1>
             <p className="text-xs text-slate-500">
               {mode === "signin"
-                ? "Enter your credentials to access staff records and terminal telemetry."
+                ? "Enter your work credentials to access staff records and terminal telemetry."
                 : mode === "signup"
-                  ? "Register an account to manage workforce biometric templates."
-                  : "Enter your work email address to receive password recovery instructions."}
+                  ? "Create an isolated company account with automated roster and kiosk management."
+                  : mode === "verify"
+                    ? `Enter the 6-digit confirmation code sent to ${email}.`
+                    : "Enter your work email address to receive password recovery instructions."}
             </p>
           </div>
 
@@ -229,6 +296,58 @@ function AuthPage() {
                   {formError}
                 </div>
               )}
+
+              {/* Mode: Verify 6-digit Code */}
+              {mode === "verify" && (
+                <div className="space-y-4 animate-in fade-in zoom-in-95 duration-150">
+                  <Field label="6-Digit Verification Code">
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={8}
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                      placeholder="123456"
+                      className="text-center tracking-widest font-mono text-lg font-bold"
+                      required
+                      autoFocus
+                    />
+                  </Field>
+
+                  <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                    <span>Didn't receive the code?</span>
+                    <button
+                      type="button"
+                      onClick={() => void handleResendOtp()}
+                      disabled={resending}
+                      className="font-semibold text-indigo-600 hover:text-indigo-700 cursor-pointer inline-flex items-center gap-1"
+                    >
+                      <RefreshCw className={`h-3 w-3 ${resending ? "animate-spin" : ""}`} />
+                      Resend Code
+                    </button>
+                  </div>
+
+                  <Button type="submit" loading={busy} size="lg" className="w-full">
+                    Confirm & Enter Workspace
+                  </Button>
+
+                  <div className="text-center pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode("signin");
+                        setFormError(null);
+                      }}
+                      className="text-xs text-slate-500 hover:text-slate-900 cursor-pointer"
+                    >
+                      ← Back to Sign In
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Mode: Sign Up Fields */}
               {mode === "signup" && (
                 <>
                   <Field label="Full Name">
@@ -253,96 +372,98 @@ function AuthPage() {
                 </>
               )}
 
-              <Field label="Work Email Address">
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@company.com"
-                  required
-                  maxLength={255}
-                />
-              </Field>
+              {/* Email and Password Fields for SignIn / SignUp / Forgot */}
+              {mode !== "verify" && (
+                <>
+                  <Field label="Work Email Address">
+                    <Input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="name@company.com"
+                      required
+                      maxLength={255}
+                    />
+                  </Field>
 
-              {mode !== "forgot" && (
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-600 font-display">
-                      Password
-                    </span>
-                    {mode === "signin" && (
+                  {mode !== "forgot" && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-600 font-display">
+                          Password
+                        </span>
+                        {mode === "signin" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setResetSent(false);
+                              setMode("forgot");
+                            }}
+                            className="text-xs text-indigo-600 hover:text-indigo-700 font-medium hover:underline cursor-pointer"
+                          >
+                            Forgot password?
+                          </button>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="••••••••"
+                          required
+                          minLength={6}
+                          maxLength={72}
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <Button type="submit" loading={busy} size="lg" className="w-full mt-2">
+                    {mode === "signin"
+                      ? "Sign in to workspace"
+                      : mode === "signup"
+                        ? "Register Company Workspace"
+                        : "Send Password Reset Link"}
+                  </Button>
+
+                  {mode === "forgot" && (
+                    <div className="text-center pt-2">
                       <button
                         type="button"
                         onClick={() => {
-                          setResetSent(false);
-                          setMode("forgot");
+                          setMode("signin");
+                          setFormError(null);
                         }}
-                        className="text-xs text-indigo-600 hover:text-indigo-700 font-medium hover:underline cursor-pointer"
+                        className="text-xs text-slate-500 hover:text-slate-900 cursor-pointer"
                       >
-                        Forgot password?
+                        ← Back to Sign In
                       </button>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••••••"
-                      required
-                      minLength={6}
-                      className="pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-                      title={showPassword ? "Hide password" : "Show password"}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <Button type="submit" size="lg" className="w-full mt-3 font-bold" loading={busy}>
-                {mode === "signin"
-                  ? "Sign In to Console"
-                  : mode === "signup"
-                    ? "Create Workspace Account"
-                    : "Send Recovery Link"}
-              </Button>
-
-              {mode === "forgot" && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="w-full mt-2"
-                  onClick={() => setMode("signin")}
-                  icon={<ArrowLeft className="h-4 w-4" />}
-                >
-                  Back to Sign In
-                </Button>
+                    </div>
+                  )}
+                </>
               )}
             </form>
           )}
-
-          {/* Footer security badge */}
-          <div className="mt-6 pt-4 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-            <span className="flex items-center gap-1.5 text-emerald-600 font-medium">
-              <ShieldCheck className="h-4 w-4" />
-              Secure 256-bit SSL Session
-            </span>
-            <Link to="/" className="text-indigo-600 hover:underline font-medium">
-              Home
-            </Link>
-          </div>
         </Panel>
+
+        {/* Back link */}
+        <div className="text-center">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to Homepage
+          </Link>
+        </div>
       </div>
     </main>
   );
