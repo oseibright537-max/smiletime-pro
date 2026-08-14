@@ -1,662 +1,302 @@
-# FaceFirst Attendance
-
-Professional Prompt: Build an Enterprise AI Facial Recognition Attendance System
-
-You are a Senior AI Engineer, Machine Learning Engineer, Computer Vision Expert, Backend Architect, Frontend Engineer, DevOps Engineer, Cybersecurity Specialist, and Software Architect.
-
-Your task is to design and build a production-ready AI Facial Recognition Attendance Management System that companies of all sizes can use to manage employee attendance securely and accurately.
-
-The system must be enterprise-grade, scalable, secure, maintainable, and follow modern software engineering best practices. Do not build a simple demo. Build software that can realistically be deployed in organizations.
-
-Overall Goal
-
-Develop a web-based AI-powered attendance platform where employees authenticate themselves using facial recognition instead of fingerprints, RFID cards, or manual sign-ins.
-
-The platform should automatically recognize employees, record attendance, calculate working hours, generate reports, and provide administrators with powerful management tools.
-
-The architecture must separate the frontend, backend, AI engine, and database into independent services using REST APIs.
-
-Technology Stack
-
-Frontend
-
-React.js
-
-TypeScript
-
-Tailwind CSS
-
-Vite
-
-React Router
-
-Axios
-
-React Query or TanStack Query
-
-Zustand or Redux Toolkit
-
-Chart.js or Recharts
-
-Framer Motion
-
-Responsive UI
-
-Backend
-
-Use FastAPI only.
-
-Do NOT use Flask.
-
-Requirements:
-
-FastAPI
-
-SQLAlchemy 2.0
-
-Alembic
-
-Pydantic v2
-
-JWT Authentication
-
-OAuth2 Password Flow
-
-Role-Based Access Control (RBAC)
-
-Async APIs
-
-Background Tasks
-
-Dependency Injection
-
-Logging
-
-Middleware
-
-Exception Handling
-
-OpenAPI Documentation
-
-AI Service
-
-Develop the AI as a separate microservice.
-
-Responsibilities:
-
-Face Detection
-
-Face Alignment
-
-Face Embedding Extraction
-
-Face Matching
-
-Liveness Detection
-
-Face Registration
-
-Recognition API
-
-Suggested libraries:
-
-InsightFace
-
-ArcFace
-
-ONNX Runtime
-
-OpenCV
-
-NumPy
-
-DeepFace (optional)
-
-MediaPipe (optional)
-
-Do not use Haar Cascades.
-
-Use deep learning models suitable for production.
-
-Database
-
-PostgreSQL
-
-Tables should include:
-
-Users
-
-Employees
-
-Departments
-
-Attendance
-
-Attendance Logs
-
-Face Embeddings
-
-Cameras
-
-Devices
-
-Roles
-
-Permissions
-
-Leave Requests
-
-Holidays
-
-Shifts
-
-Payroll References
-
-Audit Logs
-
-Storage
-
-Use MinIO or AWS S3 for:
-
-Employee images
-
-Face registration images
-
-Logs
-
-Reports
-
-Never store images inside PostgreSQL.
-
-Authentication
-
-Implement:
-
-JWT Access Tokens
-
-Refresh Tokens
-
-Password Hashing using bcrypt
-
-Multi-factor authentication (optional)
-
-Admin login
-
-HR login
-
-Manager login
-
-Employee login
-
-AI Facial Recognition Requirements
-
-Implement:
-
-Employee Registration
-
-The employee should capture multiple face images from different angles:
-
-Front
-
-Left
-
-Right
-
-Up
-
-Down
-
-Generate a facial embedding and store only the embedding vector in the database. Avoid using raw images for recognition.
-
-Attendance Recognition
-
-The system should:
-
-Capture live webcam video.
-
-Detect a face.
-
-Verify liveness to reduce spoofing risks.
-
-Generate an embedding.
-
-Compare it against stored embeddings.
-
-Apply a configurable similarity threshold.
-
-Confirm the employee identity.
-
-Record attendance automatically.
-
-Attendance should be completed in under two seconds on standard hardware.
-
-Anti-Spoofing
-
-The system must defend against:
-
-Printed photos
-
-Phone screens
-
-Videos
-
-Masks
-
-Deepfakes (where practical)
-
-Use liveness detection techniques before accepting attendance.
-
-Attendance Logic
-
-Support:
-
-Check-In
-
-Check-Out
-
-Late Arrival
-
-Early Departure
-
-Break Start
-
-Break End
-
-Overtime
-
-Multiple Shifts
-
-Night Shifts
-
-Weekend Work
-
-Prevent duplicate attendance entries.
-
-Implement configurable attendance policies.
-
-HR Features
-
-Create modules for:
-
-Employee Management
-
-Add employee
-
-Edit employee
-
-Delete employee
-
-Suspend employee
-
-Face registration
-
-Reset face data
-
-Departments
-
-CRUD operations
-
-Teams
-
-Positions
-
-Branches
-
-Companies
-
-Locations
-
-Shifts
-
-Leave Management
-
-Holiday Calendar
-
-Payroll Export
-
-Attendance Correction Requests
-
-Approval Workflows
-
-Dashboard
-
-Provide:
-
-Administrator Dashboard
-
-Employees present today
-
-Employees absent
-
-Late arrivals
-
-Attendance trends
-
-Monthly reports
-
-Recognition statistics
-
-Active cameras
-
-AI confidence metrics
-
-HR Dashboard
-
-Employee Dashboard
-
-Manager Dashboard
-
-Reports
-
-Generate:
-
-Daily Attendance
-
-Weekly Attendance
-
-Monthly Attendance
-
-Late Employees
-
-Absent Employees
-
-Working Hours
-
-Overtime
-
-Payroll Summary
-
-Export formats:
-
-PDF
-
-Excel
-
-CSV
-
-API Design
-
-Create RESTful APIs.
-
-Examples:
-
-POST /api/v1/auth/login
-
-POST /api/v1/auth/refresh
-
-POST /api/v1/employees
-
-GET /api/v1/employees
-
-GET /api/v1/employees/{id}
-
-PUT /api/v1/employees/{id}
-
-DELETE /api/v1/employees/{id}
-
-POST /api/v1/faces/register
-
-POST /api/v1/faces/recognize
-
-POST /api/v1/attendance/checkin
-
-POST /api/v1/attendance/checkout
-
-GET /api/v1/attendance
-
-GET /api/v1/reports
-
-GET /api/v1/dashboard
-
-Backend Folder Structure
-
-Design a clean architecture using:
-
-app/
-
-api/
-
-core/
-
-models/
-
-schemas/
-
-services/
-
-repositories/
-
-dependencies/
-
-middleware/
-
-utils/
-
-database/
-
-security/
-
-ai/
-
-config/
-
-tests/
-
-main.py
-
-Separate business logic from routes. Follow SOLID principles and use dependency injection.
-
-Frontend Pages
-
-Landing Page
-
-Login
-
-Dashboard
-
-Employees
-
-Attendance
-
-Face Registration
-
-Reports
-
-Departments
-
-Settings
-
-User Profile
-
-Analytics
-
-Audit Logs
-
-Security
-
-Implement:
-
-HTTPS support
-
-JWT Authentication
-
-CORS
-
-Rate Limiting
-
-Input Validation
-
-SQL Injection Protection
-
-XSS Protection
-
-CSRF Protection where applicable
-
-Audit Logging
-
-Encryption for sensitive data
-
-Secrets Management via environment variables
-
-AI Optimization
-
-Support:
-
-GPU acceleration when available
-
-CPU fallback
-
-Batch processing
-
-Embedding caching
-
-Asynchronous inference
-
-Model loading at startup
-
-Automatic model warm-up
-
-Testing
-
-Create:
-
-Unit Tests
-
-Integration Tests
-
-API Tests
-
-AI Accuracy Tests
-
-Load Tests
-
-End-to-End Tests
-
-Target at least 90% code coverage.
-
-Deployment
-
-Containerize all services using Docker.
-
-Use Docker Compose for local development.
-
-Include:
-
-FastAPI
-
-AI Service
-
-PostgreSQL
-
-Redis
-
-MinIO
-
-Nginx
-
-Provide production-ready deployment documentation and environment configuration.
-
-Documentation
-
-Produce comprehensive documentation including:
-
-System architecture diagrams
-
-Database ERD
-
-API documentation
-
-Sequence diagrams
-
-Installation guide
-
-Deployment guide
-
-User manual
-
-Administrator manual
-
-AI model documentation
-
-Security considerations
-
-Troubleshooting guide
-
-Development Workflow
-
-Build the system incrementally. Complete and test each module before moving to the next.
-
-Recommended order:
-
-Project architecture and folder structure
-
-Database design
-
-FastAPI backend setup
-
-Authentication and authorization
-
-Employee management APIs
-
-AI face registration
-
-AI face recognition
-
-Attendance engine
-
-Frontend integration
-
-Reporting
-
-Testing
-
-Dockerization
-
-Deployment
-
-Documentation
-
-For every feature, provide:
-
-Folder structure
-
-Database models
-
-Pydantic schemas
-
-API endpoints
-
-Business logic
-
-Validation
-
-Error handling
-
-Unit tests
-
-Integration tests
-
-Frontend integration steps
-
-Do not skip implementation details. Produce production-quality, modular, well-documented code with explanations for architectural decisions, ensuring all services communicate reliably through REST APIs and are ready for future scaling into a multi-company Software-as-a-Service (SaaS) platform.
-
-This project was built with [Lovable](https://lovable.dev).
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/432ae0d7-c19c-42b0-a146-a568f3f088b5).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
-
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+# SmileTime Pro — Automated AI Facial Attendance & Workforce Intelligence
+
+An enterprise-grade, privacy-first **Automated Biometric Attendance Management & Workforce Intelligence Platform**. Features real-time client-side neural face matching (FaceNet 128-D), active anti-spoof liveness challenges, strict multi-tenant SaaS architecture, server-side shift compliance rules (8:30 AM cutoff & 4:40 PM departure window), and formatted HR payroll & lateness audit exports.
+
+---
+
+## 🌟 Key Features
+
+* **Real-Time Client-Side Facial Recognition:** 
+  * Powered by `@vladmandic/face-api` (TinyFaceDetector + FaceLandmarks68 + FaceRecognitionNet).
+  * 100% Zero-Photo storage: only 128-dimensional mathematical vector descriptors are stored in PostgreSQL (`pgvector`).
+* **Active Anti-Spoofing & Liveness Detection:** 
+  * Active real-time randomized motor challenges (Blink, Turn Left, Turn Right, Nod Up) with Eye Aspect Ratio (EAR) tracking and Laplacian variance blur gating.
+* **Server-Side Shift Window & Punctuality Engine:**
+  * **Morning Cutoff:** 8:30 AM (Auto-calculates lateness in minutes via server-side PostgreSQL RPC).
+  * **Evening Departure:** 4:40 PM – 8:00 PM (Validated unrestricted clock-out).
+  * **Night Lockdown:** 8:00 PM – 12:00 AM (Restricted terminal state to prevent erratic scans).
+* **Multi-Tenant SaaS Architecture:**
+  * Complete isolation of organizations, departments, employees, biometric embeddings, and attendance logs.
+  * Multi-company workspace switcher and automated tenant provisioning on signup.
+* **Formatted Manager CSV Exports:**
+  * **Master Daily Attendance CSV:** Full event logs with neural confidence, liveness verification, and compliance remarks.
+  * **One-Click Late Audit CSV:** Filtered report of all late arrivals with exact lateness minutes, cutoff comparisons, and infraction severity ratings.
+  * **Monthly HR Payroll & Infractions CSV:** Working day compliance, punctuality percentage, and disciplinary tier ratings.
+* **Fully Responsive Telemetry Dashboard:**
+  * Auto-scaling Recharts analytics, live attendance counters, and employee roster management optimized for phones, tablets, and desktops.
+
+---
+
+## 🛠️ Technology Stack
+
+| Layer | Technology |
+|---|---|
+| **Framework** | TanStack Start (React 19, `@tanstack/react-router`, `@tanstack/react-query`) |
+| **Server Engine** | Nitro (`cloudflare-module` preset) |
+| **Styling** | Vanilla Tailwind CSS Design System & Lucide Icons |
+| **Biometrics** | FaceNet 128-D Vector Embeddings & TinyFaceDetector |
+| **Database** | Supabase PostgreSQL with `pgvector` & Row-Level Security (RLS) |
+| **Auth & Security** | Supabase Auth (bcrypt, JWT), CSP, HSTS, X-Frame-Options, CSRF middleware |
+
+---
+
+## 🚀 Free Deployment Guide (Cloudflare Pages)
+
+Follow these steps to deploy SmileTime Pro for free on **Cloudflare Pages**:
+
+### Step 1: Database Setup (Supabase)
+1. Create a free account at [supabase.com](https://supabase.com) and start a new project.
+2. In your Supabase dashboard, navigate to the **SQL Editor**.
+3. Open [`supabase/full_schema.sql`](./supabase/full_schema.sql) (or run the security script below) and click **Run**.
+4. Go to **Project Settings (gear icon)** → **API** to copy your **Project URL** and **anon public key**.
+
+### Step 2: Connect to Cloudflare Pages
+1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) → **Compute (Workers & Pages)**.
+2. Click **Create application** → select the **Pages** tab → click **Connect to Git**.
+3. Select your repository: `oseibright537-max/smiletime-pro`.
+4. Click **Begin setup**.
+
+### Step 3: Configure Build Settings
+Fill in the deployment settings:
+* **Project name:** `smiletime-pro`
+* **Production branch:** `main`
+* **Framework preset:** `None` (or `Vite`)
+* **Build command:**
+  ```bash
+  npm run build
+  ```
+* **Build output directory:**
+  ```bash
+  .output/public
+  ```
+* **Root directory:** *(Leave blank)*
+
+### Step 4: Add Environment Variables
+Under **Environment variables (advanced)**, add:
+
+| Variable Name | Value |
+|---|---|
+| `VITE_SUPABASE_URL` | `https://your-project.supabase.co` |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_...` (or your `anon` key) |
+| `SUPABASE_URL` | `https://your-project.supabase.co` |
+| `SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_...` (or your `anon` key) |
+| `NODE_VERSION` | `20` |
+
+### Step 5: Deploy
+1. Click **Save and Deploy**.
+2. Cloudflare will build the application in ~1-2 minutes and provide your live URL (e.g. `https://smiletime-pro.pages.dev`).
+
+### Step 6: Configure Supabase Auth URLs
+1. In your **Supabase Dashboard**, go to **Authentication** → **URL Configuration**.
+2. Set **Site URL** to: `https://smiletime-pro.pages.dev`
+3. Add to **Redirect URLs**:
+   * `https://smiletime-pro.pages.dev/**`
+   * `https://smiletime-pro.pages.dev/auth`
+4. Click **Save**.
+
+---
+
+## 🗄️ Supabase SQL Hardening Script
+
+Run this SQL snippet in your Supabase SQL Editor to activate server-side attendance recording and strict RLS isolation:
+
+```sql
+-- 1. SERVER-SIDE ATTENDANCE RECORDING RPC
+CREATE OR REPLACE FUNCTION public.record_attendance(
+  _org_id uuid DEFAULT NULL,
+  _employee_id uuid DEFAULT NULL,
+  _kind text DEFAULT 'check_in',
+  _confidence numeric DEFAULT NULL,
+  _liveness_score numeric DEFAULT NULL,
+  _device_label text DEFAULT 'FaceTime Attendance Terminal'
+)
+RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  _current_time timestamptz := now();
+  _current_date date := CURRENT_DATE;
+  _minutes int;
+  _calculated_status text := 'normal';
+  _status_label text := 'Normal';
+  _is_late boolean := false;
+  _event_id uuid;
+  _emp_exists boolean;
+  _recent_count int;
+BEGIN
+  IF _employee_id IS NULL THEN
+    RAISE EXCEPTION 'Employee ID is required.';
+  END IF;
+
+  IF _org_id IS NOT NULL AND auth.uid() IS NOT NULL THEN
+    IF NOT public.user_belongs_to_org(_org_id, auth.uid()) THEN
+      RAISE EXCEPTION 'Access Denied: Caller does not belong to this organization.';
+    END IF;
+  END IF;
+
+  SELECT EXISTS (
+    SELECT 1 FROM public.employees
+    WHERE id = _employee_id
+      AND (_org_id IS NULL OR organization_id = _org_id OR organization_id IS NULL)
+      AND (status IS NULL OR status = 'active')
+  ) INTO _emp_exists;
+
+  IF NOT _emp_exists THEN
+    RAISE EXCEPTION 'Employee not found or inactive.';
+  END IF;
+
+  -- 45-Second Duplicate Throttle
+  SELECT COUNT(*) INTO _recent_count
+  FROM public.attendance_events
+  WHERE employee_id = _employee_id
+    AND kind = _kind
+    AND occurred_at >= (_current_time - interval '45 seconds');
+
+  IF _recent_count > 0 THEN
+    RETURN jsonb_build_object(
+      'success', false,
+      'duplicate', true,
+      'message', 'Duplicate scan ignored. Already logged within the last minute.'
+    );
+  END IF;
+
+  -- Shift Rule Evaluation: 8:30 AM Cutoff
+  _minutes := EXTRACT(HOUR FROM _current_time) * 60 + EXTRACT(MINUTE FROM _current_time);
+
+  IF _kind = 'check_in' THEN
+    IF _minutes <= 510 THEN -- 8:30 AM
+      _calculated_status := 'on_time';
+      _status_label := 'On Time';
+      _is_late := false;
+    ELSE
+      _calculated_status := 'late';
+      _status_label := 'Late (+' || (_minutes - 510) || 'm)';
+      _is_late := true;
+    END IF;
+  ELSIF _kind = 'check_out' THEN
+    IF _minutes >= 1000 AND _minutes <= 1200 THEN -- 4:40 PM - 8:00 PM
+      _calculated_status := 'normal';
+      _status_label := 'Validated Departure';
+      _is_late := false;
+    ELSIF _minutes < 1000 THEN
+      _calculated_status := 'early_leave';
+      _status_label := 'Early Departure';
+      _is_late := false;
+    ELSE
+      _calculated_status := 'normal';
+      _status_label := 'Late Departure';
+      _is_late := false;
+    END IF;
+  ELSE
+    _calculated_status := 'normal';
+    _status_label := 'Break Event';
+    _is_late := false;
+  END IF;
+
+  INSERT INTO public.attendance_events (
+    organization_id, employee_id, kind, status, local_date,
+    confidence, liveness_score, device_label, occurred_at
+  ) VALUES (
+    _org_id, _employee_id, _kind, _calculated_status, _current_date,
+    _confidence, _liveness_score, _device_label, _current_time
+  ) RETURNING id INTO _event_id;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'event_id', _event_id,
+    'status', _calculated_status,
+    'status_label', _status_label,
+    'is_late', _is_late,
+    'occurred_at', _current_time
+  );
+END;
+$$;
+
+-- 2. HARDEN ROW-LEVEL SECURITY POLICIES
+DROP POLICY IF EXISTS "attendance insertable" ON public.attendance_events;
+CREATE POLICY "attendance insertable" ON public.attendance_events
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    organization_id IS NULL OR public.user_belongs_to_org(organization_id)
+  );
+
+DROP POLICY IF EXISTS "attendance readable" ON public.attendance_events;
+CREATE POLICY "attendance readable" ON public.attendance_events
+  FOR SELECT TO authenticated
+  USING (
+    organization_id IS NULL
+    OR public.user_is_org_staff(organization_id)
+    OR employee_id IN (SELECT id FROM public.employees WHERE user_id = auth.uid())
+  );
+
+DROP POLICY IF EXISTS "face embeddings readable" ON public.face_embeddings;
+CREATE POLICY "face embeddings readable" ON public.face_embeddings
+  FOR SELECT TO authenticated
+  USING (
+    organization_id IS NULL
+    OR public.user_is_org_staff(organization_id)
+    OR employee_id IN (SELECT id FROM public.employees WHERE user_id = auth.uid())
+  );
+
+-- 3. PERMISSIONS & SCHEMA BOUNDS
+GRANT EXECUTE ON FUNCTION public.record_attendance TO authenticated, anon;
+REVOKE INSERT, UPDATE, DELETE ON public.attendance_events FROM anon;
+REVOKE INSERT, UPDATE, DELETE ON public.employees FROM anon;
+REVOKE INSERT, UPDATE, DELETE ON public.face_embeddings FROM anon;
 ```
+
+---
+
+## 💻 Local Development
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/oseibright537-max/smiletime-pro.git
+   cd smiletime-pro
+   ```
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+3. **Configure environment variables:**
+   Create a `.env` file in the root directory:
+   ```env
+   VITE_SUPABASE_URL=https://your-project.supabase.co
+   VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+   SUPABASE_URL=https://your-project.supabase.co
+   SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+   ```
+4. **Start local development server:**
+   ```bash
+   npm run dev
+   ```
+5. **Run Lint and Production Build checks:**
+   ```bash
+   npm run lint
+   npm run format
+   npm run build
+   ```
+
+---
+
+## 📊 Manager Reporting & CSV Exports
+
+SmileTime Pro provides RFC 4180-compliant CSV exports with embedded UTF-8 Byte Order Marks (`\uFEFF`) for native compatibility with Microsoft Excel, Apple Numbers, Google Sheets, and mobile spreadsheet viewers:
+
+1. **Master Daily Log:** Full audit trail with biometric match confidence and server timestamps.
+2. **Late Audit CSV:** Dedicated punctuality report filtered exclusively for late arrivals with exact minutes late and infraction severity categories.
+3. **Monthly Payroll Summary:** Total scheduled days, days present, attendance percentage, punctuality score, and HR compliance tiers.
+
+---
+
+## 🛡️ Security & Privacy Compliance
+
+* **Zero Photo Ingestion:** No raw facial pictures or video streams are stored on servers or database disks.
+* **Vectorized pgvector:** Facial geometry is converted locally into 128-D floating point embeddings.
+* **Anti-Spoof Gating:** Prevents photo, video playback, and print attacks through dynamic multi-step challenges.
+* **Security Headers:** Enforces Content-Security-Policy (CSP), Strict-Transport-Security (HSTS), X-Frame-Options (DENY), and X-Content-Type-Options (nosniff).
+* **Dependency Health:** 0 high or critical npm vulnerabilities.
+
+---
+
+## 📄 License
+MIT License. Created for enterprise biometric attendance and workforce intelligence.
