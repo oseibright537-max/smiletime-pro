@@ -284,7 +284,7 @@ export function BulkEnrollmentModal({ isOpen, onClose, organizationId }: BulkEnr
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".csv,.xlsx,.xls,.tsv,text/csv"
+                  accept=".csv,.tsv,text/csv,text/tab-separated-values,text/plain"
                   className="hidden"
                   onChange={(e) => {
                     if (e.target.files?.[0]) {
@@ -296,13 +296,12 @@ export function BulkEnrollmentModal({ isOpen, onClose, organizationId }: BulkEnr
                   <UploadCloud className="h-8 w-8" />
                 </div>
                 <h3 className="text-base font-bold text-slate-900 font-display">
-                  Click or drag HR Master Spreadsheet here
+                  Click or drag HR Master Roster here
                 </h3>
                 <p className="text-xs text-slate-500 mt-1.5 max-w-md mx-auto">
-                  Supports <strong className="text-slate-700">.CSV</strong>,{" "}
-                  <strong className="text-slate-700">.XLSX</strong>, and{" "}
-                  <strong className="text-slate-700">.XLS</strong> files. Automatically parses
-                  Employee IDs, Names, Departments, Emails, and Job Titles.
+                  Supports <strong className="text-slate-700">.CSV</strong> and{" "}
+                  <strong className="text-slate-700">.TSV</strong> spreadsheet exports.
+                  Automatically parses Employee IDs, Names, Departments, Emails, and Job Titles.
                 </p>
                 <div className="mt-5 inline-flex items-center gap-2 bg-white border border-indigo-200 rounded-xl px-4 py-2 text-xs font-semibold text-indigo-700 shadow-xs">
                   <FileSpreadsheet className="h-4 w-4" /> Select Master Spreadsheet File
@@ -416,9 +415,7 @@ export function BulkEnrollmentModal({ isOpen, onClose, organizationId }: BulkEnr
                   <label className="text-xs font-bold text-slate-700 block mb-1">Work Email</label>
                   <Select
                     value={columnMapping.email}
-                    onChange={(e) =>
-                      setColumnMapping({ ...columnMapping, email: e.target.value })
-                    }
+                    onChange={(e) => setColumnMapping({ ...columnMapping, email: e.target.value })}
                   >
                     <option value="">-- None --</option>
                     {rawHeaders.map((h) => (
@@ -584,7 +581,9 @@ export function BulkEnrollmentModal({ isOpen, onClose, organizationId }: BulkEnr
                   <button
                     onClick={() => setFilterTab("update")}
                     className={`px-3 py-1 rounded-lg font-semibold transition-all ${
-                      filterTab === "update" ? "bg-white text-indigo-700 shadow-xs" : "text-slate-600"
+                      filterTab === "update"
+                        ? "bg-white text-indigo-700 shadow-xs"
+                        : "text-slate-600"
                     }`}
                   >
                     Updates ({preview.updateCount})
@@ -593,7 +592,9 @@ export function BulkEnrollmentModal({ isOpen, onClose, organizationId }: BulkEnr
                     <button
                       onClick={() => setFilterTab("invalid")}
                       className={`px-3 py-1 rounded-lg font-semibold transition-all ${
-                        filterTab === "invalid" ? "bg-white text-rose-700 shadow-xs" : "text-slate-600"
+                        filterTab === "invalid"
+                          ? "bg-white text-rose-700 shadow-xs"
+                          : "text-slate-600"
                       }`}
                     >
                       Errors ({preview.errorCount})
@@ -655,7 +656,9 @@ export function BulkEnrollmentModal({ isOpen, onClose, organizationId }: BulkEnr
                               </Badge>
                               {r.diffs && r.diffs.length > 0 && (
                                 <span className="text-[10px] text-indigo-600">
-                                  {r.diffs.map((d) => `${d.field}: ${d.oldVal}→${d.newVal}`).join(", ")}
+                                  {r.diffs
+                                    .map((d) => `${d.field}: ${d.oldVal}→${d.newVal}`)
+                                    .join(", ")}
                                 </span>
                               )}
                             </div>
@@ -684,8 +687,8 @@ export function BulkEnrollmentModal({ isOpen, onClose, organizationId }: BulkEnr
                   Bulk Workforce Ingestion Complete!
                 </h3>
                 <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-                  Master spreadsheet ingested. Employee directory records have been pre-populated into
-                  PostgreSQL database.
+                  Master spreadsheet ingested. Employee directory records have been pre-populated
+                  into PostgreSQL database.
                 </p>
               </div>
 

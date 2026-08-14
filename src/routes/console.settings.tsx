@@ -98,10 +98,18 @@ function SettingsPage() {
 
   // Reset All Attendance Logs for active company
   const handleClearLogs = async () => {
-    if (!confirm(`Are you sure you want to clear all past attendance clock-in events for ${currentOrg?.name || "this company"}?`)) return;
+    if (
+      !confirm(
+        `Are you sure you want to clear all past attendance clock-in events for ${currentOrg?.name || "this company"}?`,
+      )
+    )
+      return;
     setBusy(true);
     try {
-      let query = supabase.from("attendance_events").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      let query = supabase
+        .from("attendance_events")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000");
       if (currentOrgId) {
         query = query.eq("organization_id", currentOrgId);
       }
@@ -117,10 +125,18 @@ function SettingsPage() {
 
   // Wipe All Face Embeddings for active company
   const handleWipeEmbeddings = async () => {
-    if (!confirm(`Warning: This will delete ALL enrolled face vectors for ${currentOrg?.name || "this company"}. Employees will need to re-enroll. Continue?`)) return;
+    if (
+      !confirm(
+        `Warning: This will delete ALL enrolled face vectors for ${currentOrg?.name || "this company"}. Employees will need to re-enroll. Continue?`,
+      )
+    )
+      return;
     setBusy(true);
     try {
-      let query = supabase.from("face_embeddings").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      let query = supabase
+        .from("face_embeddings")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000");
       if (currentOrgId) {
         query = query.eq("organization_id", currentOrgId);
       }
@@ -164,7 +180,8 @@ function SettingsPage() {
           Company Settings & Security
         </h1>
         <p className="mt-1 text-xs sm:text-sm text-slate-500">
-          Manage company workspace details, biometric policies, shift windows, and security lifecycle.
+          Manage company workspace details, biometric policies, shift windows, and security
+          lifecycle.
         </p>
       </div>
 
@@ -177,7 +194,9 @@ function SettingsPage() {
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900 font-display">Company Workspace</h2>
-              <span className="text-xs text-slate-500">Multi-tenant enterprise account details</span>
+              <span className="text-xs text-slate-500">
+                Multi-tenant enterprise account details
+              </span>
             </div>
           </div>
 
@@ -204,7 +223,12 @@ function SettingsPage() {
             </div>
 
             <div className="flex justify-end pt-1">
-              <Button type="submit" size="sm" loading={busy} icon={<Save className="h-3.5 w-3.5" />}>
+              <Button
+                type="submit"
+                size="sm"
+                loading={busy}
+                icon={<Save className="h-3.5 w-3.5" />}
+              >
                 Save Company Name
               </Button>
             </div>
@@ -219,7 +243,9 @@ function SettingsPage() {
             <User className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-900 font-display">Administrator Profile</h2>
+            <h2 className="text-base font-bold text-slate-900 font-display">
+              Administrator Profile
+            </h2>
             <span className="text-xs text-slate-500">Signed in credentials & permissions</span>
           </div>
         </div>
@@ -227,7 +253,9 @@ function SettingsPage() {
         <div className="grid sm:grid-cols-2 gap-4 text-xs">
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
             <span className="text-slate-500 font-medium block">Email Address</span>
-            <span className="font-semibold text-slate-900 text-sm block">{user?.email ?? "Not logged in"}</span>
+            <span className="font-semibold text-slate-900 text-sm block">
+              {user?.email ?? "Not logged in"}
+            </span>
           </div>
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
             <span className="text-slate-500 font-medium block">Assigned Roles</span>
@@ -270,8 +298,13 @@ function SettingsPage() {
             <Sliders className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-900 font-display">Data Management & Maintenance</h2>
-            <span className="text-xs text-slate-500">Purge telemetry or reset biometric face templates for {currentOrg?.name || "this company"}</span>
+            <h2 className="text-base font-bold text-slate-900 font-display">
+              Data Management & Maintenance
+            </h2>
+            <span className="text-xs text-slate-500">
+              Purge telemetry or reset biometric face templates for{" "}
+              {currentOrg?.name || "this company"}
+            </span>
           </div>
         </div>
 
@@ -280,7 +313,8 @@ function SettingsPage() {
             <div>
               <h3 className="text-sm font-bold text-slate-900">Clear Attendance Logs</h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Deletes all past clock-in and clock-out logs for this company. Employee directory remains intact.
+                Deletes all past clock-in and clock-out logs for this company. Employee directory
+                remains intact.
               </p>
             </div>
             <Button
@@ -299,7 +333,8 @@ function SettingsPage() {
             <div>
               <h3 className="text-sm font-bold text-slate-900">Reset Face Templates</h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Wipes all enrolled neural vector embeddings for this company. Employees will need to re-enroll.
+                Wipes all enrolled neural vector embeddings for this company. Employees will need to
+                re-enroll.
               </p>
             </div>
             <Button
@@ -329,7 +364,8 @@ function SettingsPage() {
         </div>
 
         <p className="text-xs text-slate-600 leading-relaxed">
-          Deleting your administrator account will remove your login credentials, role assignments, and unlink your profile.
+          Deleting your administrator account will remove your login credentials, role assignments,
+          and unlink your profile.
         </p>
 
         {!showDeleteModal ? (
@@ -344,7 +380,8 @@ function SettingsPage() {
         ) : (
           <div className="space-y-3 p-4 rounded-xl bg-white border border-rose-300">
             <p className="text-xs font-semibold text-rose-900">
-              Type <span className="font-mono font-bold">DELETE MY ACCOUNT</span> below to permanently confirm:
+              Type <span className="font-mono font-bold">DELETE MY ACCOUNT</span> below to
+              permanently confirm:
             </p>
             <Input
               value={confirmDeleteText}

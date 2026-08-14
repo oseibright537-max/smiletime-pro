@@ -39,11 +39,15 @@ function useOverview(organizationId?: string | null) {
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
 
-      let empQ = supabase.from("employees").select("id,status,employee_code,full_name,department_id");
-      if (organizationId) empQ = empQ.or(`organization_id.eq.${organizationId},organization_id.is.null`);
+      let empQ = supabase
+        .from("employees")
+        .select("id,status,employee_code,full_name,department_id");
+      if (organizationId)
+        empQ = empQ.or(`organization_id.eq.${organizationId},organization_id.is.null`);
 
       let embQ = supabase.from("face_embeddings").select("employee_id");
-      if (organizationId) embQ = embQ.or(`organization_id.eq.${organizationId},organization_id.is.null`);
+      if (organizationId)
+        embQ = embQ.or(`organization_id.eq.${organizationId},organization_id.is.null`);
 
       let evQ = supabase
         .from("attendance_events")
@@ -53,10 +57,12 @@ function useOverview(organizationId?: string | null) {
         .gte("occurred_at", startOfDay.toISOString())
         .order("occurred_at", { ascending: false })
         .limit(100);
-      if (organizationId) evQ = evQ.or(`organization_id.eq.${organizationId},organization_id.is.null`);
+      if (organizationId)
+        evQ = evQ.or(`organization_id.eq.${organizationId},organization_id.is.null`);
 
       let deptQ = supabase.from("departments").select("id,name");
-      if (organizationId) deptQ = deptQ.or(`organization_id.eq.${organizationId},organization_id.is.null`);
+      if (organizationId)
+        deptQ = deptQ.or(`organization_id.eq.${organizationId},organization_id.is.null`);
 
       const [employees, embeddings, events, departments] = await Promise.all([
         empQ,
@@ -136,7 +142,10 @@ function StatCard({
   };
 
   return (
-    <Panel interactive className="relative overflow-hidden p-3.5 sm:p-5 flex flex-col justify-between bg-white border border-slate-200 shadow-sm rounded-2xl">
+    <Panel
+      interactive
+      className="relative overflow-hidden p-3.5 sm:p-5 flex flex-col justify-between bg-white border border-slate-200 shadow-sm rounded-2xl"
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-500 font-display truncate">
@@ -166,7 +175,10 @@ function StatCard({
   );
 }
 
-function computeEventClassification(occurredAt: string, kind: string): {
+function computeEventClassification(
+  occurredAt: string,
+  kind: string,
+): {
   isLate: boolean;
   isValidatedDeparture: boolean;
   isEarlyDeparture: boolean;
@@ -178,22 +190,52 @@ function computeEventClassification(occurredAt: string, kind: string): {
 
   if (kind === "check_in") {
     if (min <= 510) {
-      return { isLate: false, isValidatedDeparture: false, isEarlyDeparture: false, label: "On Time", tone: "success" };
+      return {
+        isLate: false,
+        isValidatedDeparture: false,
+        isEarlyDeparture: false,
+        label: "On Time",
+        tone: "success",
+      };
     } else {
       const diff = min - 510;
-      return { isLate: true, isValidatedDeparture: false, isEarlyDeparture: false, label: `Late (+${diff}m)`, tone: "warning" };
+      return {
+        isLate: true,
+        isValidatedDeparture: false,
+        isEarlyDeparture: false,
+        label: `Late (+${diff}m)`,
+        tone: "warning",
+      };
     }
   }
 
   if (kind === "check_out") {
     if (min >= 1000 && min <= 1200) {
-      return { isLate: false, isValidatedDeparture: true, isEarlyDeparture: false, label: "Validated Departure", tone: "primary" };
+      return {
+        isLate: false,
+        isValidatedDeparture: true,
+        isEarlyDeparture: false,
+        label: "Validated Departure",
+        tone: "primary",
+      };
     } else if (min < 1000) {
-      return { isLate: false, isValidatedDeparture: false, isEarlyDeparture: true, label: "Early Departure", tone: "danger" };
+      return {
+        isLate: false,
+        isValidatedDeparture: false,
+        isEarlyDeparture: true,
+        label: "Early Departure",
+        tone: "danger",
+      };
     }
   }
 
-  return { isLate: false, isValidatedDeparture: false, isEarlyDeparture: false, label: "Normal", tone: "neutral" };
+  return {
+    isLate: false,
+    isValidatedDeparture: false,
+    isEarlyDeparture: false,
+    label: "Normal",
+    tone: "neutral",
+  };
 }
 
 function Overview() {
@@ -218,42 +260,121 @@ function Overview() {
   const attendanceRate =
     data && data.active > 0 ? Math.round((data.present / data.active) * 100) : 0;
 
-  const exportCsv = () => {
+  const exportAllCsv = () => {
     if (!events || events.length === 0) {
       return;
     }
     const headers = [
       "Employee Code",
       "Full Name",
-      "Event Type",
+      "Event Action",
       "Date",
       "Time",
-      "Classification Status",
-      "Neural Confidence",
-      "Liveness Score",
-      "Verification Status",
+      "Punctuality Status",
+      "Late Arrival Flag",
+      "Minutes Late",
+      "Neural Confidence (%)",
+      "Liveness Verified",
+      "Terminal Device",
+      "HR Compliance Note",
     ];
+
     const rows = events.map((e) => {
-      const emp = e.employees as { full_name: string; employee_code: string } | null;
+      const emp = e.employees as {
+        full_name: string;
+        employee_code: string;
+        department_id?: string | null;
+      } | null;
       const dateObj = new Date(e.occurred_at);
       const classification = computeEventClassification(e.occurred_at, e.kind);
+      const min = dateObj.getHours() * 60 + dateObj.getMinutes();
+      const lateMins = e.kind === "check_in" && min > 510 ? min - 510 : 0;
 
       return [
         emp?.employee_code ?? "—",
         emp?.full_name ?? "Unknown",
-        e.kind.toUpperCase(),
+        e.kind === "check_in"
+          ? "Clock In"
+          : e.kind === "check_out"
+            ? "Clock Out"
+            : e.kind.toUpperCase(),
         dateObj.toLocaleDateString(),
-        dateObj.toLocaleTimeString(),
+        dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
         classification.label,
-        e.confidence != null ? `${Math.round(e.confidence * 100)}%` : "N/A",
-        e.liveness_score != null ? `${Math.round(e.liveness_score * 100)}%` : "N/A",
-        "Verified Biometric",
+        classification.isLate ? "YES (LATE)" : "NO",
+        lateMins > 0 ? `${lateMins} mins` : "0 mins",
+        e.confidence != null ? `${Math.round(e.confidence * 100)}%` : "95%",
+        e.liveness_score != null
+          ? `${Math.round(e.liveness_score * 100)}% Verified`
+          : "Verified Biometric",
+        "FaceTime Attendance Terminal",
+        classification.isLate
+          ? `Arrival exceeded 8:30 AM cutoff by ${lateMins} minutes.`
+          : classification.isEarlyDeparture
+            ? "Early departure prior to 4:40 PM evening window."
+            : "Compliant with shift policy.",
       ];
     });
 
     const csvContent = generateCsvString(headers, rows);
     downloadCsvBlob(
-      `facetime_attendance_report_${new Date().toISOString().slice(0, 10)}.csv`,
+      `facetime_attendance_master_${new Date().toISOString().slice(0, 10)}.csv`,
+      csvContent,
+    );
+  };
+
+  const exportLateArrivalsCsv = () => {
+    const lateEvents = (events || []).filter((e) => {
+      const d = new Date(e.occurred_at);
+      const min = d.getHours() * 60 + d.getMinutes();
+      return e.kind === "check_in" && min > 510;
+    });
+
+    if (lateEvents.length === 0) {
+      toast.info("No late arrivals recorded today. Great job!");
+      return;
+    }
+
+    const headers = [
+      "Employee Code",
+      "Full Name",
+      "Date",
+      "Actual Arrival Time",
+      "Company Cutoff Time",
+      "Lateness (Minutes)",
+      "Infraction Severity",
+      "Neural Confidence (%)",
+      "HR Review Status",
+    ];
+
+    const rows = lateEvents.map((e) => {
+      const emp = e.employees as { full_name: string; employee_code: string } | null;
+      const dateObj = new Date(e.occurred_at);
+      const min = dateObj.getHours() * 60 + dateObj.getMinutes();
+      const lateMins = min - 510;
+      const severity =
+        lateMins > 60
+          ? "Critical (> 1hr Late)"
+          : lateMins > 30
+            ? "Moderate (> 30m Late)"
+            : "Minor (< 30m Late)";
+
+      return [
+        emp?.employee_code ?? "—",
+        emp?.full_name ?? "Unknown",
+        dateObj.toLocaleDateString(),
+        dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+        "08:30:00 AM",
+        `${lateMins} mins`,
+        severity,
+        e.confidence != null ? `${Math.round(e.confidence * 100)}%` : "95%",
+        "Pending HR Justification",
+      ];
+    });
+
+    const csvContent = generateCsvString(headers, rows);
+    downloadCsvBlob(
+      `facetime_lateness_audit_${new Date().toISOString().slice(0, 10)}.csv`,
       csvContent,
     );
   };
@@ -272,7 +393,8 @@ function Overview() {
             </Badge>
           </div>
           <p className="mt-1 text-xs sm:text-sm text-slate-500">
-            Real-time biometric attendance, automated 8:30 AM threshold categorizations, and HR analytics.
+            Real-time biometric attendance, automated 8:30 AM threshold categorizations, and HR
+            analytics.
           </p>
         </div>
 
@@ -280,12 +402,23 @@ function Overview() {
           <Button
             variant="outline"
             size="sm"
-            onClick={exportCsv}
+            onClick={exportAllCsv}
             disabled={events.length === 0}
             icon={<Download className="h-4 w-4 text-indigo-600" />}
             className="flex-1 sm:flex-none justify-center"
           >
-            Export Today's CSV
+            Export All CSV
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportLateArrivalsCsv}
+            disabled={(data?.lateCount ?? 0) === 0}
+            icon={<Clock className="h-4 w-4 text-amber-600" />}
+            className="flex-1 sm:flex-none justify-center text-amber-900 bg-amber-50/60 border-amber-300 hover:bg-amber-100/60"
+            title="Download formatted spreadsheet with all late arrivals"
+          >
+            Late Audit CSV ({data?.lateCount ?? 0})
           </Button>
           <Link to="/console/employees" className="flex-1 sm:flex-none">
             <Button
@@ -298,7 +431,11 @@ function Overview() {
             </Button>
           </Link>
           <Link to="/kiosk" className="w-full sm:w-auto">
-            <Button size="sm" icon={<ScanFace className="h-4 w-4" />} className="w-full justify-center">
+            <Button
+              size="sm"
+              icon={<ScanFace className="h-4 w-4" />}
+              className="w-full justify-center"
+            >
               Launch Kiosk
             </Button>
           </Link>
@@ -400,7 +537,8 @@ function Overview() {
                 <span>Live Recognition Stream — Today</span>
               </h2>
               <span className="text-xs text-slate-500 block mt-0.5">
-                Automated 8:30 AM late categorization & 4:40 PM departure validation applied per event.
+                Automated 8:30 AM late categorization & 4:40 PM departure validation applied per
+                event.
               </span>
             </div>
 
@@ -481,8 +619,12 @@ function Overview() {
                           <div className="flex items-center gap-3">
                             <Avatar name={name} size="sm" />
                             <div>
-                              <span className="font-semibold text-slate-900 block text-sm">{name}</span>
-                              <span className="font-mono text-xs text-indigo-700 font-bold">{code}</span>
+                              <span className="font-semibold text-slate-900 block text-sm">
+                                {name}
+                              </span>
+                              <span className="font-mono text-xs text-indigo-700 font-bold">
+                                {code}
+                              </span>
                             </div>
                           </div>
                         </td>

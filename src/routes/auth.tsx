@@ -144,7 +144,9 @@ function AuthPage() {
         }
 
         if (error) {
-          throw new Error("Invalid or expired verification code. Please check your email or request a new code.");
+          throw new Error(
+            "Invalid or expired verification code. Please check your email or request a new code.",
+          );
         }
 
         if (data?.session) {
@@ -421,7 +423,11 @@ function AuthPage() {
                           onClick={() => setShowPassword(!showPassword)}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-1"
                         >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
                         </button>
                       </div>
                     </div>

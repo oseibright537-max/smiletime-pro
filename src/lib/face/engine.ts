@@ -153,10 +153,7 @@ export async function analyseFrame(
 
   try {
     const result = await faceapi
-      .detectSingleFace(
-        video,
-        new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold }),
-      )
+      .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold }))
       .withFaceLandmarks()
       .withFaceDescriptor();
 
@@ -183,10 +180,7 @@ export async function analyseAllFaces(
 
   try {
     const results = await faceapi
-      .detectAllFaces(
-        video,
-        new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold }),
-      )
+      .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold }))
       .withFaceLandmarks()
       .withFaceDescriptors();
 
@@ -279,9 +273,7 @@ export async function analyseAllImageFaces(
     .withFaceLandmarks()
     .withFaceDescriptors();
 
-  return results
-    .map((r) => toSample(r as never, width))
-    .sort((a, b) => b.box.width - a.box.width);
+  return results.map((r) => toSample(r as never, width)).sort((a, b) => b.box.width - a.box.width);
 }
 
 /**
@@ -388,7 +380,8 @@ export async function extractEmbeddingFromSnapshot(video: HTMLVideoElement): Pro
       return {
         success: false,
         faceCount: samples.length,
-        error: "Multiple faces detected. Please make sure only one person is in front of the camera.",
+        error:
+          "Multiple faces detected. Please make sure only one person is in front of the camera.",
       };
     }
 
@@ -474,4 +467,3 @@ export function findBestVectorMatch(
 
   return { match: null, distance: bestDist, confidence: 0 };
 }
-

@@ -36,7 +36,9 @@ export function useCamera() {
       stop();
 
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setError("Camera API is not supported on this browser or connection is not HTTPS/localhost.");
+        setError(
+          "Camera API is not supported on this browser or connection is not HTTPS/localhost.",
+        );
         setActive(false);
         return;
       }
@@ -71,16 +73,22 @@ export function useCamera() {
               video: true,
               audio: false,
             });
-          } catch (err3: any) {
+          } catch (err3: unknown) {
+            const errObj = err3 as Error | undefined;
             console.error("All camera constraints failed:", err3);
-            if (err3?.name === "NotAllowedError" || err3?.name === "PermissionDeniedError") {
-              setError("Camera permission denied. Please allow camera access in your browser settings.");
-            } else if (err3?.name === "NotFoundError" || err3?.name === "DevicesNotFoundError") {
+            if (errObj?.name === "NotAllowedError" || errObj?.name === "PermissionDeniedError") {
+              setError(
+                "Camera permission denied. Please allow camera access in your browser settings.",
+              );
+            } else if (
+              errObj?.name === "NotFoundError" ||
+              errObj?.name === "DevicesNotFoundError"
+            ) {
               setError("No camera hardware detected on this device.");
-            } else if (err3?.name === "NotReadableError" || err3?.name === "TrackStartError") {
+            } else if (errObj?.name === "NotReadableError" || errObj?.name === "TrackStartError") {
               setError("Camera is currently in use by another application or tab.");
             } else {
-              setError("Could not access camera: " + (err3?.message || "Unknown error"));
+              setError("Could not access camera: " + (errObj?.message || "Unknown error"));
             }
             setActive(false);
             return;

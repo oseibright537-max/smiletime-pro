@@ -24,7 +24,10 @@ interface TimeWindowBannerProps {
   showRulesGuide?: boolean;
 }
 
-export function TimeWindowBanner({ compact = false, showRulesGuide = true }: TimeWindowBannerProps) {
+export function TimeWindowBanner({
+  compact = false,
+  showRulesGuide = true,
+}: TimeWindowBannerProps) {
   const [windowInfo, setWindowInfo] = useState<TimeWindowStatus>(() => evaluateTimeWindow());
   const [showDetails, setShowDetails] = useState(false);
 
@@ -122,7 +125,11 @@ export function TimeWindowBanner({ compact = false, showRulesGuide = true }: Tim
               className="px-2.5 py-1.5 rounded-xl bg-white/70 hover:bg-white border border-inherit text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer shrink-0 shadow-xs"
             >
               <span>{showDetails ? "Hide Rules" : "Shift Rules"}</span>
-              {showDetails ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              {showDetails ? (
+                <ChevronUp className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5" />
+              )}
             </button>
           )}
         </div>
@@ -157,7 +164,8 @@ export function TimeWindowBanner({ compact = false, showRulesGuide = true }: Tim
               <span>4:40 PM – 8:00 PM</span>
             </div>
             <span className="text-[11px] text-slate-600 block">
-              Evening clock-out window. Departure categorized as <strong>Validated Departure</strong>.
+              Evening clock-out window. Departure categorized as{" "}
+              <strong>Validated Departure</strong>.
             </span>
           </div>
 

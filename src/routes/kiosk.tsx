@@ -50,7 +50,8 @@ export const Route = createFileRoute("/kiosk")({
       { title: "High-Speed Attendance Kiosk Terminal" },
       {
         name: "description",
-        content: "Instant facial recognition attendance terminal with automated shift window enforcement.",
+        content:
+          "Instant facial recognition attendance terminal with automated shift window enforcement.",
       },
     ],
   }),
@@ -87,7 +88,12 @@ function Kiosk() {
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [bypassShiftRules, setBypassShiftRules] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [detectedBox, setDetectedBox] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [detectedBox, setDetectedBox] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
 
   const [recentScans, setRecentScans] = useState<
     Array<{
@@ -137,7 +143,9 @@ function Kiosk() {
     try {
       let query = supabase
         .from("face_embeddings")
-        .select("id, employee_id, organization_id, embedding, pose, employees(id, full_name, employee_code, status, organization_id)")
+        .select(
+          "id, employee_id, organization_id, embedding, pose, employees(id, full_name, employee_code, status, organization_id)",
+        )
         .order("created_at", { ascending: false });
 
       if (currentOrgId) {
@@ -149,7 +157,13 @@ function Kiosk() {
 
       const parsed: EnrolledCandidate[] = [];
       for (const row of data ?? []) {
-        const emp = row.employees as { id: string; full_name: string; employee_code: string; status: string; organization_id?: string } | null;
+        const emp = row.employees as {
+          id: string;
+          full_name: string;
+          employee_code: string;
+          status: string;
+          organization_id?: string;
+        } | null;
         if (emp && (!emp.status || emp.status === "active")) {
           // If currentOrgId is active, only include if matches or null
           if (!currentOrgId || !emp.organization_id || emp.organization_id === currentOrgId) {
@@ -189,43 +203,40 @@ function Kiosk() {
     }
   }, [modelsReady, active, error, user, start]);
 
-  const finish = useCallback(
-    (payload: NonNullable<typeof result>) => {
-      setResult(payload);
-      setPhase("result");
-      busyRef.current = true;
-      lastScanTimeRef.current = Date.now();
+  const finish = useCallback((payload: NonNullable<typeof result>) => {
+    setResult(payload);
+    setPhase("result");
+    busyRef.current = true;
+    lastScanTimeRef.current = Date.now();
 
-      if (payload.ok) {
-        biometricAudio.playSuccess();
-      } else {
-        biometricAudio.playDenied();
-      }
+    if (payload.ok) {
+      biometricAudio.playSuccess();
+    } else {
+      biometricAudio.playDenied();
+    }
 
-      const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      setRecentScans((prev) => [
-        {
-          id: Math.random().toString(36).substring(2, 9),
-          name: payload.name || "Unrecognized Person",
-          kind: kindRef.current,
-          time: nowStr,
-          success: payload.ok,
-          statusLabel: payload.statusLabel,
-        },
-        ...prev.slice(0, 7),
-      ]);
+    const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    setRecentScans((prev) => [
+      {
+        id: Math.random().toString(36).substring(2, 9),
+        name: payload.name || "Unrecognized Person",
+        kind: kindRef.current,
+        time: nowStr,
+        success: payload.ok,
+        statusLabel: payload.statusLabel,
+      },
+      ...prev.slice(0, 7),
+    ]);
 
-      // Reset after 3.2 seconds so the scanner is ready for the next person
-      setTimeout(() => {
-        setResult(null);
-        setDetectedBox(null);
-        unrecognizedFramesCount.current = 0;
-        busyRef.current = false;
-        setPhase("searching");
-      }, 3200);
-    },
-    [],
-  );
+    // Reset after 3.2 seconds so the scanner is ready for the next person
+    setTimeout(() => {
+      setResult(null);
+      setDetectedBox(null);
+      unrecognizedFramesCount.current = 0;
+      busyRef.current = false;
+      setPhase("searching");
+    }, 3200);
+  }, []);
 
   // Instant Face Matching Engine
   const processFaceDescriptor = useCallback(
@@ -303,7 +314,8 @@ function Kiosk() {
             ok: false,
             name: matchFullName,
             employeeCode: matchEmployeeCode,
-            message: ruleCheck.reason || "This clock action is restricted during current shift hours.",
+            message:
+              ruleCheck.reason || "This clock action is restricted during current shift hours.",
             statusLabel: ruleCheck.statusLabel,
             statusTone: "danger",
           });
@@ -339,24 +351,63 @@ function Kiosk() {
 
         const confidence = Math.max(0.75, Math.min(0.99, 1 - bestDistance * 0.55));
         const localDateStr = now.toISOString().slice(0, 10);
-        const finalStatus = bypassShiftRules ? "normal" : ruleCheck.status;
-        const finalStatusLabel = bypassShiftRules ? "Verified (Test Mode)" : ruleCheck.statusLabel;
+        let finalStatus = bypassShiftRules ? "normal" : ruleCheck.status;
+        let finalStatusLabel = bypassShiftRules ? "Verified (Test Mode)" : ruleCheck.statusLabel;
 
-        // INSERT ATTENDANCE EVENT INTO SUPABASE WITH STATUS AND TENANT ID
-        const { error: insertError } = await supabase.from("attendance_events").insert({
-          organization_id: currentOrgId || undefined,
-          employee_id: matchEmployeeId,
-          kind: kindRef.current,
-          status: finalStatus,
-          local_date: localDateStr,
-          confidence,
-          liveness_score: 0.98,
-          device_label: "FaceTime Attendance Terminal",
-        });
+        // 4. SECURE SERVER-SIDE ATTENDANCE RECORDING (Prevents client status tampering)
+        let recorded = false;
+        try {
+          const { data: rpcRes, error: rpcErr } = await supabase.rpc("record_attendance", {
+            _org_id: currentOrgId || undefined,
+            _employee_id: matchEmployeeId,
+            _kind: kindRef.current,
+            _confidence: confidence,
+            _liveness_score: 0.98,
+            _device_label: "FaceTime Attendance Terminal",
+          });
 
-        if (insertError) {
-          finish({ ok: false, message: insertError.message });
-          return;
+          if (!rpcErr && rpcRes) {
+            const parsedRes = typeof rpcRes === "string" ? JSON.parse(rpcRes) : rpcRes;
+            if (parsedRes.duplicate) {
+              finish({
+                ok: false,
+                name: matchFullName,
+                employeeCode: matchEmployeeCode,
+                message: parsedRes.message || `${matchFullName} already logged recently.`,
+                statusLabel: "Duplicate Scan Ignored",
+                statusTone: "warning",
+              });
+              return;
+            }
+            if (parsedRes.success) {
+              recorded = true;
+              if (!bypassShiftRules && parsedRes.status_label) {
+                finalStatus = parsedRes.status;
+                finalStatusLabel = parsedRes.status_label;
+              }
+            }
+          }
+        } catch {
+          recorded = false;
+        }
+
+        // Direct insert fallback if RPC has not been executed on database yet
+        if (!recorded) {
+          const { error: insertError } = await supabase.from("attendance_events").insert({
+            organization_id: currentOrgId || undefined,
+            employee_id: matchEmployeeId,
+            kind: kindRef.current,
+            status: finalStatus,
+            local_date: localDateStr,
+            confidence,
+            liveness_score: 0.98,
+            device_label: "FaceTime Attendance Terminal",
+          });
+
+          if (insertError) {
+            finish({ ok: false, message: insertError.message });
+            return;
+          }
         }
 
         finish({
@@ -376,7 +427,7 @@ function Kiosk() {
         });
       }
     },
-    [enrolledTemplates, finish, matchThreshold, bypassShiftRules],
+    [enrolledTemplates, finish, matchThreshold, bypassShiftRules, currentOrgId],
   );
 
   // Real-time automatic scanner loop
@@ -422,7 +473,9 @@ function Kiosk() {
       toast.info("Scanning camera frame…");
       const sample = await analyseFrame(videoRef.current, { scoreThreshold: 0.22, inputSize: 416 });
       if (!sample) {
-        toast.error("No face visible in camera. Please face the camera directly with good lighting.");
+        toast.error(
+          "No face visible in camera. Please face the camera directly with good lighting.",
+        );
         return;
       }
       setDetectedBox(sample.box);
@@ -440,11 +493,10 @@ function Kiosk() {
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 mb-4">
             <ShieldAlert className="h-7 w-7" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 font-display">
-            Terminal Unprovisioned
-          </h1>
+          <h1 className="text-2xl font-bold text-slate-900 font-display">Terminal Unprovisioned</h1>
           <p className="mt-2 text-xs text-slate-500 leading-relaxed">
-            Sign in with an authorized account on this station to activate facial attendance capture.
+            Sign in with an authorized account on this station to activate facial attendance
+            capture.
           </p>
           <div className="mt-6">
             <Link to="/auth" search={{ next: "/kiosk" }}>
@@ -468,7 +520,8 @@ function Kiosk() {
               to="/console"
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors bg-slate-100 hover:bg-slate-200 px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-200"
             >
-              <ArrowLeft className="h-3.5 w-3.5" /> <span className="hidden xs:inline">Back to</span> Console
+              <ArrowLeft className="h-3.5 w-3.5" />{" "}
+              <span className="hidden xs:inline">Back to</span> Console
             </Link>
 
             <Link to="/" className="group hidden sm:block">
@@ -505,14 +558,18 @@ function Kiosk() {
             <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200">
               <div>
                 <span className="font-bold text-slate-800 block">Enrolled Faces in Cache</span>
-                <span className="text-[11px] text-slate-500">{enrolledTemplates.length} biometric templates loaded</span>
+                <span className="text-[11px] text-slate-500">
+                  {enrolledTemplates.length} biometric templates loaded
+                </span>
               </div>
               <button
                 onClick={() => void loadTemplates()}
                 className="p-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100"
                 title="Reload vector templates"
               >
-                <RefreshCw className={`h-3.5 w-3.5 text-indigo-600 ${loadingTemplates ? "animate-spin" : ""}`} />
+                <RefreshCw
+                  className={`h-3.5 w-3.5 text-indigo-600 ${loadingTemplates ? "animate-spin" : ""}`}
+                />
               </button>
             </div>
 
@@ -530,13 +587,17 @@ function Kiosk() {
                 onChange={(e) => setMatchThreshold(parseFloat(e.target.value))}
                 className="w-full h-1.5 bg-slate-200 rounded-lg accent-indigo-600 cursor-pointer"
               />
-              <span className="text-[10px] text-slate-400 block mt-0.5">Higher = More lenient lighting match</span>
+              <span className="text-[10px] text-slate-400 block mt-0.5">
+                Higher = More lenient lighting match
+              </span>
             </div>
 
             <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200">
               <div>
                 <span className="font-bold text-slate-800 block">Shift Rule Override</span>
-                <span className="text-[11px] text-slate-500">Allow clock actions 24/7 for testing</span>
+                <span className="text-[11px] text-slate-500">
+                  Allow clock actions 24/7 for testing
+                </span>
               </div>
               <input
                 type="checkbox"
@@ -556,11 +617,16 @@ function Kiosk() {
             <div className="flex items-center gap-2.5">
               <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
               <span>
-                <strong>No facial profiles enrolled yet.</strong> Go to the Employee Directory to enrol your first face before testing attendance.
+                <strong>No facial profiles enrolled yet.</strong> Go to the Employee Directory to
+                enrol your first face before testing attendance.
               </span>
             </div>
             <Link to="/console/employees" className="shrink-0 w-full sm:w-auto">
-              <Button size="xs" variant="outline" className="w-full justify-center bg-white border-amber-300 text-amber-900">
+              <Button
+                size="xs"
+                variant="outline"
+                className="w-full justify-center bg-white border-amber-300 text-amber-900"
+              >
                 Go to Face Enrollment
               </Button>
             </Link>
@@ -734,16 +800,31 @@ function Kiosk() {
                 </Button>
 
                 {active && (
-                  <Button size="sm" onClick={() => void handleManualScan()} icon={<Zap className="h-3.5 w-3.5" />} className="flex-1 sm:flex-none justify-center">
+                  <Button
+                    size="sm"
+                    onClick={() => void handleManualScan()}
+                    icon={<Zap className="h-3.5 w-3.5" />}
+                    className="flex-1 sm:flex-none justify-center"
+                  >
                     Scan Now
                   </Button>
                 )}
                 {active ? (
-                  <Button variant="outline" size="sm" onClick={stop} className="flex-1 sm:flex-none justify-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={stop}
+                    className="flex-1 sm:flex-none justify-center"
+                  >
                     Stop Scanner
                   </Button>
                 ) : (
-                  <Button size="sm" onClick={() => void start()} icon={<Camera className="h-3.5 w-3.5" />} className="flex-1 sm:flex-none justify-center">
+                  <Button
+                    size="sm"
+                    onClick={() => void start()}
+                    icon={<Camera className="h-3.5 w-3.5" />}
+                    className="flex-1 sm:flex-none justify-center"
+                  >
                     Start Scanner
                   </Button>
                 )}

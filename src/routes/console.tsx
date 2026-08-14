@@ -25,7 +25,8 @@ export const Route = createFileRoute("/console")({
       { title: "Console — FaceTime Attendance" },
       {
         name: "description",
-        content: "Manage employees, face enrolment, and attendance activity in FaceTime Attendance.",
+        content:
+          "Manage employees, face enrolment, and attendance activity in FaceTime Attendance.",
       },
     ],
   }),
@@ -209,7 +210,9 @@ function ConsoleLayout() {
                         : "text-slate-700 hover:bg-slate-50"
                     }`}
                   >
-                    <item.icon className={`h-4 w-4 ${active ? "text-indigo-600" : "text-slate-500"}`} />
+                    <item.icon
+                      className={`h-4 w-4 ${active ? "text-indigo-600" : "text-slate-500"}`}
+                    />
                     <span>{item.label}</span>
                   </Link>
                 );
@@ -255,12 +258,12 @@ function ConsoleLayout() {
               key={item.to}
               to={item.to}
               className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-semibold transition-all ${
-                active
-                  ? "text-indigo-600 font-bold"
-                  : "text-slate-500 hover:text-slate-900"
+                active ? "text-indigo-600 font-bold" : "text-slate-500 hover:text-slate-900"
               }`}
             >
-              <item.icon className={`h-4 w-4 mb-0.5 ${active ? "text-indigo-600" : "text-slate-500"}`} />
+              <item.icon
+                className={`h-4 w-4 mb-0.5 ${active ? "text-indigo-600" : "text-slate-500"}`}
+              />
               <span className="truncate max-w-[75px]">{item.label.split(" ")[0]}</span>
             </Link>
           );

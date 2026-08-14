@@ -1,3 +1,4 @@
+import Papa from "papaparse";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface ParsedEmployeeRow {
@@ -58,9 +59,7 @@ export function autoDetectColumnMapping(headers: string[]): ColumnMapping {
 
   const findBest = (patterns: string[]): string => {
     for (const pattern of patterns) {
-      const match = normalized.find(
-        (n) => n.clean === pattern || n.clean.includes(pattern),
-      );
+      const match = normalized.find((n) => n.clean === pattern || n.clean.includes(pattern));
       if (match) return match.original;
     }
     return "";
@@ -104,113 +103,45 @@ export function autoDetectColumnMapping(headers: string[]): ColumnMapping {
 /**
  * Robust RFC 4180 CSV / TSV text parser that handles quotes, commas, tabs, and multiline values
  */
-export function parseDelimitedText(text: string): { headers: string[]; rows: Record<string, string>[] } {
-  // Detect delimiter (comma, tab, semicolon)
-  const firstLine = text.split(/\r?\n/)[0] || "";
-  let delimiter = ",";
-  if (firstLine.includes("\t")) delimiter = "\t";
-  else if (firstLine.includes(";") && !firstLine.includes(",")) delimiter = ";";
+export function parseDelimitedText(text: string): {
+  headers: string[];
+  rows: Record<string, string>[];
+} {
+  const parsed = Papa.parse<Record<string, string>>(text, {
+    header: true,
+    skipEmptyLines: "greedy",
+    transformHeader: (header) => header.replace(/^\uFEFF/, "").trim(),
+  });
 
-  const lines: string[][] = [];
-  let currentRow: string[] = [];
-  let currentField = "";
-  let inQuotes = false;
+  const headers = (parsed.meta.fields || []).map((h) => h.trim()).filter(Boolean);
+  const rows: Record<string, string>[] = [];
 
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    const nextChar = text[i + 1];
-
-    if (char === '"') {
-      if (inQuotes && nextChar === '"') {
-        currentField += '"';
-        i++; // skip escaped quote
-      } else {
-        inQuotes = !inQuotes;
-      }
-    } else if (char === delimiter && !inQuotes) {
-      currentRow.push(currentField.trim());
-      currentField = "";
-    } else if ((char === "\r" || char === "\n") && !inQuotes) {
-      if (char === "\r" && nextChar === "\n") i++;
-      currentRow.push(currentField.trim());
-      currentField = "";
-      if (currentRow.some((val) => val.length > 0)) {
-        lines.push(currentRow);
-      }
-      currentRow = [];
-    } else {
-      currentField += char;
+  for (const row of parsed.data || []) {
+    if (!row || Object.keys(row).length === 0) continue;
+    const cleanRow: Record<string, string> = {};
+    for (const key of headers) {
+      cleanRow[key] = (row[key] || "").trim();
     }
+    rows.push(cleanRow);
   }
 
-  if (currentField.length > 0 || currentRow.length > 0) {
-    currentRow.push(currentField.trim());
-    if (currentRow.some((val) => val.length > 0)) {
-      lines.push(currentRow);
-    }
-  }
-
-  if (lines.length === 0 || !lines[0]) {
-    return { headers: [], rows: [] };
-  }
-
-  // Remove potential UTF-8 BOM from the first header
-  const headers = lines[0].map((h, idx) => (idx === 0 ? h.replace(/^\uFEFF/, "").trim() : h.trim()));
-  const dataRows: Record<string, string>[] = [];
-
-  for (let r = 1; r < lines.length; r++) {
-    const rowValues = lines[r];
-    if (!rowValues) continue;
-    const rowObj: Record<string, string> = {};
-    headers.forEach((header, idx) => {
-      rowObj[header] = rowValues[idx] || "";
-    });
-    dataRows.push(rowObj);
-  }
-
-  return { headers, rows: dataRows };
+  return { headers, rows };
 }
 
 /**
- * Parses uploaded spreadsheet file (CSV, TSV, or XLSX/XLS if supported)
+ * Parses uploaded spreadsheet file (CSV, TSV, or plain delimited text)
  */
-export async function parseRosterFile(file: File): Promise<{ headers: string[]; rows: Record<string, string>[] }> {
+export async function parseRosterFile(
+  file: File,
+): Promise<{ headers: string[]; rows: Record<string, string>[] }> {
   const fileName = file.name.toLowerCase();
 
-  // If XLSX / XLS and xlsx library is available in window or dynamic import
   if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
-    try {
-      const XLSX = await import("xlsx");
-      const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: "array" });
-      const firstSheetName = workbook.SheetNames[0];
-      if (!firstSheetName) return { headers: [], rows: [] };
-      const sheet = workbook.Sheets[firstSheetName];
-      if (!sheet) return { headers: [], rows: [] };
-      const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { header: 1, defval: "" });
-
-      if (jsonData.length === 0) return { headers: [], rows: [] };
-
-      const headers = (jsonData[0] as any[]).map((h) => String(h || "").trim()).filter(Boolean);
-      const rows: Record<string, string>[] = [];
-
-      for (let i = 1; i < jsonData.length; i++) {
-        const rowArr = jsonData[i] as any[];
-        if (!rowArr || rowArr.length === 0 || rowArr.every((c) => !c)) continue;
-        const rowObj: Record<string, string> = {};
-        headers.forEach((h, idx) => {
-          rowObj[h] = String(rowArr[idx] ?? "").trim();
-        });
-        rows.push(rowObj);
-      }
-
-      return { headers, rows };
-    } catch (e) {
-      console.warn("XLSX parser fallback to text reader:", e);
-    }
+    throw new Error(
+      "Binary Excel (.xlsx / .xls) files are not supported directly for security reasons. Please save or export your spreadsheet as CSV (.csv) or TSV (.tsv) before uploading.",
+    );
   }
 
-  // Fallback to text parsing (works for CSV, TSV, text exports)
   const text = await file.text();
   return parseDelimitedText(text);
 }
@@ -241,9 +172,19 @@ export async function reconcileRosterWithDatabase(
     deptQuery,
   ]);
 
-  const empCodeMap = new Map<string, any>();
-  const empEmailMap = new Map<string, any>();
-  (existingEmployees ?? []).forEach((e) => {
+  interface ExistingEmployeeRecord {
+    id: string;
+    employee_code: string;
+    full_name: string;
+    email: string | null;
+    job_title: string | null;
+    department_id: string | null;
+    departments: { name: string } | null;
+  }
+
+  const empCodeMap = new Map<string, ExistingEmployeeRecord>();
+  const empEmailMap = new Map<string, ExistingEmployeeRecord>();
+  ((existingEmployees as unknown as ExistingEmployeeRecord[]) ?? []).forEach((e) => {
     if (e.employee_code) empCodeMap.set(e.employee_code.toLowerCase().trim(), e);
     if (e.email) empEmailMap.set(e.email.toLowerCase().trim(), e);
   });
@@ -316,7 +257,11 @@ export async function reconcileRosterWithDatabase(
         diffs.push({ field: "Department", oldVal: oldDept || "Unassigned", newVal: rawDept });
       }
       if (rawTitle && existingMatch.job_title !== rawTitle) {
-        diffs.push({ field: "Title/Contact", oldVal: existingMatch.job_title || "None", newVal: rawTitle });
+        diffs.push({
+          field: "Title/Contact",
+          oldVal: existingMatch.job_title || "None",
+          newVal: rawTitle,
+        });
       }
     }
 
@@ -415,7 +360,17 @@ export async function executeBulkRosterIngestion(
     }
 
     // 2. Process Employee Inserts & Updates
-    const toInsert: any[] = [];
+    interface EmployeeInsertPayload {
+      organization_id: string | null;
+      employee_code: string;
+      full_name: string;
+      email: string | null;
+      job_title: string | null;
+      department_id: string | null;
+      status: "active" | "suspended" | "terminated";
+    }
+
+    const toInsert: EmployeeInsertPayload[] = [];
     const toUpdate: ParsedEmployeeRow[] = [];
 
     for (const row of rows) {

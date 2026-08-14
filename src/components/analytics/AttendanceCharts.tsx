@@ -410,8 +410,7 @@ export function AttendanceCharts({
                       <Tooltip
                         content={({ active, payload }) => {
                           if (!active || !payload?.length || !payload[0]) return null;
-                          const data = payload[0];
-                          const color = (data.payload as any)?.color || "#6366f1";
+                          const color = (data.payload as { color?: string })?.color || "#6366f1";
                           return (
                             <div className="rounded-xl border border-slate-200 bg-slate-900/95 px-3 py-2 text-xs text-white shadow-xl backdrop-blur-md">
                               <span className="font-bold block" style={{ color }}>

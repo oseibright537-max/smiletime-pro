@@ -57,7 +57,10 @@ export function evaluateTimeWindow(
   });
 
   // Morning Window: 00:00 - 08:30
-  if (currentMinutes >= config.morningStartMinutes && currentMinutes <= config.onTimeCutoffMinutes) {
+  if (
+    currentMinutes >= config.morningStartMinutes &&
+    currentMinutes <= config.onTimeCutoffMinutes
+  ) {
     const minutesToLate = config.onTimeCutoffMinutes - currentMinutes;
     return {
       currentMinutes,

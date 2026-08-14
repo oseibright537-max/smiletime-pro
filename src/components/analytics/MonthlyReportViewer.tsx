@@ -110,7 +110,8 @@ export function MonthlyReportViewer({ onClose }: MonthlyReportViewerProps) {
       const empEvents = empEventMap.get(emp.id) || [];
       const dept = (emp.departments as { name: string } | null)?.name ?? "Unassigned";
 
-      const dailyMap = new Map<string, { checkIn?: any; checkOut?: any }>();
+      type EventItem = (typeof events)[number];
+      const dailyMap = new Map<string, { checkIn?: EventItem; checkOut?: EventItem }>();
       empEvents.forEach((ev) => {
         const dayKey = new Date(ev.occurred_at).toISOString().slice(0, 10);
         const dayEntry = dailyMap.get(dayKey) || {};
@@ -154,7 +155,8 @@ export function MonthlyReportViewer({ onClose }: MonthlyReportViewerProps) {
         }
 
         if (checkIn && checkOut) {
-          const diffMs = new Date(checkOut.occurred_at).getTime() - new Date(checkIn.occurred_at).getTime();
+          const diffMs =
+            new Date(checkOut.occurred_at).getTime() - new Date(checkIn.occurred_at).getTime();
           const hours = Math.max(0, diffMs / (1000 * 60 * 60));
           totalWorkHours += hours;
         } else if (checkIn) {
@@ -164,8 +166,7 @@ export function MonthlyReportViewer({ onClose }: MonthlyReportViewerProps) {
       });
 
       const daysPresent = dailyMap.size;
-      const punctualityScore =
-        daysPresent > 0 ? Math.round((onTimeDays / daysPresent) * 100) : 100;
+      const punctualityScore = daysPresent > 0 ? Math.round((onTimeDays / daysPresent) * 100) : 100;
 
       return {
         employeeCode: emp.employee_code,
@@ -197,7 +198,8 @@ export function MonthlyReportViewer({ onClose }: MonthlyReportViewerProps) {
 
       let matchesTier = true;
       if (tierFilter === "tier1") matchesTier = r.punctualityScore >= 90;
-      else if (tierFilter === "tier2") matchesTier = r.punctualityScore >= 75 && r.punctualityScore < 90;
+      else if (tierFilter === "tier2")
+        matchesTier = r.punctualityScore >= 75 && r.punctualityScore < 90;
       else if (tierFilter === "tier3") matchesTier = r.punctualityScore < 75;
 
       return matchesSearch && matchesDept && matchesTier;
@@ -221,6 +223,59 @@ export function MonthlyReportViewer({ onClose }: MonthlyReportViewerProps) {
       return;
     }
     exportMonthlyPayrollSummary(monthLabel, reportData, workingDays);
+  };
+
+  const handleExportLateInfractionsCsv = () => {
+    const lateStaff = reportData.filter((e) => e.lateDays > 0);
+    if (!lateStaff.length) {
+      toast.info("No late infractions recorded for " + monthLabel + ". Perfect punctuality!");
+      return;
+    }
+
+    const headers = [
+      "Employee Code",
+      "Full Name",
+      "Department",
+      "Job Title",
+      "Days Present",
+      "Late Days Count",
+      "Late Frequency (% of Days)",
+      "Total Lateness (Minutes)",
+      "Avg Lateness Per Infraction (Minutes)",
+      "Punctuality Rating (%)",
+      "HR Disciplinary Tier",
+    ];
+
+    const rows = lateStaff.map((e) => {
+      const lateFreq = e.daysPresent > 0 ? Math.round((e.lateDays / e.daysPresent) * 100) : 0;
+      const avgMins = e.lateDays > 0 ? Math.round(e.totalLateMinutes / e.lateDays) : 0;
+      const tier =
+        e.lateDays >= 5 || e.punctualityScore < 70
+          ? "Tier 3 — Escalation Required"
+          : e.lateDays >= 2
+            ? "Tier 2 — Warning Advisory"
+            : "Tier 1 — Isolated Incident";
+
+      return [
+        e.employeeCode,
+        e.fullName,
+        e.department,
+        e.jobTitle,
+        e.daysPresent,
+        e.lateDays,
+        `${lateFreq}%`,
+        e.totalLateMinutes,
+        `${avgMins} mins`,
+        `${e.punctualityScore}%`,
+        tier,
+      ];
+    });
+
+    const csvContent = generateCsvString(headers, rows);
+    downloadCsvBlob(
+      `facetime_monthly_late_infractions_${monthLabel.replace(/\s+/g, "_")}.csv`,
+      csvContent,
+    );
   };
 
   const handleCopyCsvClipboard = () => {
@@ -293,6 +348,17 @@ export function MonthlyReportViewer({ onClose }: MonthlyReportViewerProps) {
               className="flex-1 sm:flex-none justify-center"
             >
               Copy CSV
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportLateInfractionsCsv}
+              disabled={reportData.filter((e) => e.lateDays > 0).length === 0}
+              icon={<Clock className="h-4 w-4 text-amber-600" />}
+              className="flex-1 sm:flex-none justify-center text-amber-900 bg-amber-50/60 border-amber-300 hover:bg-amber-100/60"
+              title="Download formatted spreadsheet of all late employees"
+            >
+              Late Infractions CSV
             </Button>
             <Button
               size="sm"
@@ -381,7 +447,9 @@ export function MonthlyReportViewer({ onClose }: MonthlyReportViewerProps) {
           <span className="text-xl sm:text-2xl font-bold text-slate-900 font-display mt-1 block">
             {reportData.length}
           </span>
-          <span className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5 block truncate">Active enrolled roster</span>
+          <span className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5 block truncate">
+            Active enrolled roster
+          </span>
         </div>
 
         <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 shadow-xs">
@@ -391,7 +459,9 @@ export function MonthlyReportViewer({ onClose }: MonthlyReportViewerProps) {
           <span className="text-xl sm:text-2xl font-bold text-emerald-700 font-display mt-1 block">
             {avgPunctuality}%
           </span>
-          <span className="text-[10px] sm:text-[11px] text-emerald-700/80 mt-0.5 block truncate">Arrivals &lt; 8:30 AM</span>
+          <span className="text-[10px] sm:text-[11px] text-emerald-700/80 mt-0.5 block truncate">
+            Arrivals &lt; 8:30 AM
+          </span>
         </div>
 
         <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50/80 border border-amber-200 shadow-xs">
@@ -401,7 +471,9 @@ export function MonthlyReportViewer({ onClose }: MonthlyReportViewerProps) {
           <span className="text-xl sm:text-2xl font-bold text-amber-800 font-display mt-1 block">
             {totalLateMins}m
           </span>
-          <span className="text-[10px] sm:text-[11px] text-amber-700/80 mt-0.5 block truncate">Entire organization</span>
+          <span className="text-[10px] sm:text-[11px] text-amber-700/80 mt-0.5 block truncate">
+            Entire organization
+          </span>
         </div>
 
         <div className="p-3.5 sm:p-4 rounded-2xl bg-indigo-50/80 border border-indigo-200 shadow-xs">
@@ -411,7 +483,9 @@ export function MonthlyReportViewer({ onClose }: MonthlyReportViewerProps) {
           <span className="text-xl sm:text-2xl font-bold text-indigo-700 font-display mt-1 block">
             {reportData.reduce((a, b) => a + b.validatedDepartures, 0)}
           </span>
-          <span className="text-[10px] sm:text-[11px] text-indigo-700/80 mt-0.5 block truncate">4:40 PM – 8:00 PM exits</span>
+          <span className="text-[10px] sm:text-[11px] text-indigo-700/80 mt-0.5 block truncate">
+            4:40 PM – 8:00 PM exits
+          </span>
         </div>
       </div>
 
@@ -483,7 +557,9 @@ export function MonthlyReportViewer({ onClose }: MonthlyReportViewerProps) {
               <tbody className="divide-y divide-slate-100">
                 {filteredReport.map((r) => {
                   const attendancePct =
-                    workingDays > 0 ? Math.min(100, Math.round((r.daysPresent / workingDays) * 100)) : 0;
+                    workingDays > 0
+                      ? Math.min(100, Math.round((r.daysPresent / workingDays) * 100))
+                      : 0;
 
                   return (
                     <tr key={r.employeeCode} className="hover:bg-slate-50 transition-colors">

@@ -83,7 +83,6 @@ function tuned(relax: number) {
   };
 }
 
-
 const work = (() => {
   let canvas: HTMLCanvasElement | null = null;
   return () => {
@@ -196,8 +195,6 @@ export function assessFrame(
     0.3 * Math.min(1, pixels.sharpness / 0.45) +
     0.2 * (1 - Math.abs(pixels.brightness - 0.55) / 0.45) +
     0.15 * (1 - Math.min(1, centerOffset / t.maxCenterOffset));
-
-
 
   return {
     ok: true,

@@ -34,7 +34,8 @@ export const Route = createFileRoute("/console/employees")({
       { title: "Employee Directory & Enrollment — FaceTime Attendance" },
       {
         name: "description",
-        content: "Manage employee profiles, biometric enrollment vectors, and department hierarchy.",
+        content:
+          "Manage employee profiles, biometric enrollment vectors, and department hierarchy.",
       },
     ],
   }),
@@ -90,9 +91,7 @@ function Employees() {
     queryFn: async () => {
       let empQ = supabase
         .from("employees")
-        .select(
-          "id,employee_code,full_name,email,job_title,status,department_id,departments(name)",
-        )
+        .select("id,employee_code,full_name,email,job_title,status,department_id,departments(name)")
         .order("created_at", { ascending: false });
       if (currentOrgId) {
         empQ = empQ.or(`organization_id.eq.${currentOrgId},organization_id.is.null`);
@@ -238,7 +237,8 @@ function Employees() {
             </Badge>
           </div>
           <p className="mt-1 text-xs sm:text-sm text-slate-500">
-            Register employees, upload master HR rosters, or enrol facial profiles for instant attendance.
+            Register employees, upload master HR rosters, or enrol facial profiles for instant
+            attendance.
           </p>
         </div>
 
@@ -278,10 +278,7 @@ function Employees() {
       </div>
 
       {/* Bulk Roster Ingestion Modal */}
-      <BulkEnrollmentModal
-        isOpen={isBulkModalOpen}
-        onClose={() => setIsBulkModalOpen(false)}
-      />
+      <BulkEnrollmentModal isOpen={isBulkModalOpen} onClose={() => setIsBulkModalOpen(false)} />
 
       {/* Add Employee Form Drawer */}
       {isStaff && isAdding && (

@@ -347,7 +347,9 @@ function Enroll() {
             {employee.data?.full_name ? (
               <span className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <span className="font-semibold text-slate-900">{employee.data.full_name}</span>
-                <span className="font-mono text-indigo-600 font-bold">({employee.data.employee_code})</span>
+                <span className="font-mono text-indigo-600 font-bold">
+                  ({employee.data.employee_code})
+                </span>
                 {employee.data.job_title && (
                   <span className="text-slate-500">· {employee.data.job_title}</span>
                 )}
@@ -563,7 +565,8 @@ function Enroll() {
                     Upload Employee Portrait Photo
                   </h3>
                   <p className="text-xs text-slate-500 mt-1 max-w-sm">
-                    Drag and drop a JPG, PNG, or WebP photo here, or click to browse from your device.
+                    Drag and drop a JPG, PNG, or WebP photo here, or click to browse from your
+                    device.
                   </p>
                 </div>
 
@@ -597,7 +600,8 @@ function Enroll() {
                         <span className="font-semibold text-slate-900 text-sm">Face Extracted</span>
                       </div>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Confidence: {Math.round((uploadSample?.score ?? 0.95) * 100)}% · Ready to Save
+                        Confidence: {Math.round((uploadSample?.score ?? 0.95) * 100)}% · Ready to
+                        Save
                       </p>
                     </div>
                   </div>
@@ -803,7 +807,9 @@ function Enroll() {
                           >
                             {complete ? <Check className="h-3 w-3" /> : n}
                           </span>
-                          <span className={complete ? "text-slate-400 line-through" : "text-slate-800"}>
+                          <span
+                            className={complete ? "text-slate-400 line-through" : "text-slate-800"}
+                          >
                             {a.label}
                           </span>
                         </div>

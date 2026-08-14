@@ -8,7 +8,10 @@ import { toast } from "sonner";
  * 3. Temporary Object URL creation and automatic clean-up.
  * 4. Fallback handling for sandboxed mobile WebViews / Safari download restrictions.
  */
-export function downloadCsvBlob(filename: string, csvContent: string): { success: boolean; fallbackUrl?: string } {
+export function downloadCsvBlob(
+  filename: string,
+  csvContent: string,
+): { success: boolean; fallbackUrl?: string } {
   try {
     // 1. Add UTF-8 BOM (\uFEFF) for Excel compatibility
     const bom = "\uFEFF";
@@ -61,7 +64,10 @@ export function downloadCsvBlob(filename: string, csvContent: string): { success
 /**
  * Converts tabular data array to RFC 4180-compliant CSV string
  */
-export function generateCsvString(headers: string[], rows: (string | number | boolean | null | undefined)[][]): string {
+export function generateCsvString(
+  headers: string[],
+  rows: (string | number | boolean | null | undefined)[][],
+): string {
   const escapeCell = (val: string | number | boolean | null | undefined): string => {
     if (val === null || val === undefined) return '""';
     const str = String(val);

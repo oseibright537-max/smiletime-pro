@@ -74,7 +74,6 @@ const MAX_PER_BUCKET = 8;
 /** Consecutive frames must differ enough to avoid storing 8 identical shots. */
 const MIN_DESCRIPTOR_DELTA = 0.02;
 
-
 type Kept = { descriptor: Float32Array; score: number };
 
 export type SessionFeedback = {
@@ -145,9 +144,8 @@ export class EnrolmentSession {
   /** The next incomplete, non-skipped bucket, in order. */
   get activeAngle(): AngleSpec | null {
     return (
-      ANGLES.find(
-        (a) => !this.skipped.has(a.key) && this.buckets.get(a.key)!.length < a.target,
-      ) ?? null
+      ANGLES.find((a) => !this.skipped.has(a.key) && this.buckets.get(a.key)!.length < a.target) ??
+      null
     );
   }
 
@@ -162,7 +160,6 @@ export class EnrolmentSession {
 
   /** Skips angles the camera/user simply cannot satisfy so we never deadlock. */
   private maintain() {
-
     const active = this.activeAngle;
     if (!active) return;
     if (active.key !== this.currentAngle) {
@@ -242,7 +239,6 @@ export class EnrolmentSession {
       canFinish: this.canFinish,
       message: next ? next.prompt : "Enrolment complete",
     };
-
   }
 
   /** One averaged, L2-normalised template per angle, plus a global mean. */

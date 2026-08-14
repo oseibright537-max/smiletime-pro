@@ -23,32 +23,35 @@ function initAuth() {
   initStarted = true;
 
   try {
-    supabase.auth.getSession().then(({ data }) => {
-      globalSession = data.session;
-      globalUser = data.session?.user ?? null;
-      globalLoaded = true;
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        globalSession = data.session;
+        globalUser = data.session?.user ?? null;
+        globalLoaded = true;
 
-      if (globalUser) {
-        supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", globalUser.id)
-          .then(({ data: rolesData, error }) => {
-            if (!error && rolesData && rolesData.length > 0) {
-              globalRoles = rolesData.map((r) => r.role as AppRole);
-            } else {
-              globalRoles = ["admin"];
-            }
-            notify();
-          });
-      } else {
-        globalRoles = [];
+        if (globalUser) {
+          supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", globalUser.id)
+            .then(({ data: rolesData, error }) => {
+              if (!error && rolesData && rolesData.length > 0) {
+                globalRoles = rolesData.map((r) => r.role as AppRole);
+              } else {
+                globalRoles = ["admin"];
+              }
+              notify();
+            });
+        } else {
+          globalRoles = [];
+          notify();
+        }
+      })
+      .catch(() => {
+        globalLoaded = true;
         notify();
-      }
-    }).catch(() => {
-      globalLoaded = true;
-      notify();
-    });
+      });
 
     supabase.auth.onAuthStateChange(async (_event, session) => {
       globalSession = session;
@@ -81,7 +84,6 @@ function initAuth() {
     notify();
   }
 }
-
 
 export function useAuth() {
   const [session, setSession] = useState<Session | null>(globalSession);

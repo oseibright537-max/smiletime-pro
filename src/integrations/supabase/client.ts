@@ -48,7 +48,9 @@ function createSupabaseClient() {
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
     const missing = [
       ...(!SUPABASE_URL ? ["SUPABASE_URL (or VITE_SUPABASE_URL)"] : []),
-      ...(!SUPABASE_PUBLISHABLE_KEY ? ["SUPABASE_PUBLISHABLE_KEY (or VITE_SUPABASE_ANON_KEY)"] : []),
+      ...(!SUPABASE_PUBLISHABLE_KEY
+        ? ["SUPABASE_PUBLISHABLE_KEY (or VITE_SUPABASE_ANON_KEY)"]
+        : []),
     ];
     const message = `Missing Supabase environment variable(s): ${missing.join(", ")}. Please check your .env file.`;
     console.error(`[Supabase] ${message}`);

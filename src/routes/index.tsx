@@ -24,7 +24,10 @@ export const Route = createFileRoute("/")({
         content:
           "Enterprise facial recognition attendance with on-device neural matching, active liveness verification, and zero raw photo storage.",
       },
-      { property: "og:title", content: "FaceTime Attendance — Enterprise Biometric Facial Recognition" },
+      {
+        property: "og:title",
+        content: "FaceTime Attendance — Enterprise Biometric Facial Recognition",
+      },
       {
         property: "og:description",
         content:
@@ -170,7 +173,11 @@ function Landing() {
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
               <Link to="/auth" search={{ next: "/console" }} className="w-full sm:w-auto">
-                <Button size="lg" className="w-full justify-center" icon={<ArrowRight className="h-4 w-4" />}>
+                <Button
+                  size="lg"
+                  className="w-full justify-center"
+                  icon={<ArrowRight className="h-4 w-4" />}
+                >
                   Access Workforce Console
                 </Button>
               </Link>
@@ -324,9 +331,12 @@ function Landing() {
                     1
                   </div>
                   <div>
-                    <strong className="text-sm text-slate-900 block">On-Device Landmark Inference</strong>
+                    <strong className="text-sm text-slate-900 block">
+                      On-Device Landmark Inference
+                    </strong>
                     <span className="text-xs text-slate-500">
-                      Camera frames are processed in volatile WebAssembly memory and immediately discarded.
+                      Camera frames are processed in volatile WebAssembly memory and immediately
+                      discarded.
                     </span>
                   </div>
                 </div>
@@ -336,9 +346,12 @@ function Landing() {
                     2
                   </div>
                   <div>
-                    <strong className="text-sm text-slate-900 block">128-D Mathematical Vector</strong>
+                    <strong className="text-sm text-slate-900 block">
+                      128-D Mathematical Vector
+                    </strong>
                     <span className="text-xs text-slate-500">
-                      Original human faces cannot be reverse-engineered from normalized vector floats.
+                      Original human faces cannot be reverse-engineered from normalized vector
+                      floats.
                     </span>
                   </div>
                 </div>
@@ -348,7 +361,9 @@ function Landing() {
                     3
                   </div>
                   <div>
-                    <strong className="text-sm text-slate-900 block">PostgreSQL pgvector Cosine Matcher</strong>
+                    <strong className="text-sm text-slate-900 block">
+                      PostgreSQL pgvector Cosine Matcher
+                    </strong>
                     <span className="text-xs text-slate-500">
                       Sub-millisecond cosine distance indexing securely verifies enrolled staff.
                     </span>
@@ -396,12 +411,19 @@ function Landing() {
             </p>
             <div className="flex flex-wrap justify-center gap-4 pt-4">
               <Link to="/auth" search={{ next: "/console" }}>
-                <Button size="lg" className="bg-white text-indigo-900 hover:bg-slate-100 border-white">
+                <Button
+                  size="lg"
+                  className="bg-white text-indigo-900 hover:bg-slate-100 border-white"
+                >
                   Open Console
                 </Button>
               </Link>
               <Link to="/kiosk">
-                <Button size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/10 hover:text-white">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-white/40 text-white hover:bg-white/10 hover:text-white"
+                >
                   Launch Attendance Kiosk
                 </Button>
               </Link>
