@@ -6,37 +6,37 @@ An enterprise-grade, privacy-first **Automated Biometric Attendance Management &
 
 ## 🌟 Key Features
 
-* **Real-Time Client-Side Facial Recognition:** 
-  * Powered by `@vladmandic/face-api` (TinyFaceDetector + FaceLandmarks68 + FaceRecognitionNet).
-  * 100% Zero-Photo storage: only 128-dimensional mathematical vector descriptors are stored in PostgreSQL (`pgvector`).
-* **Active Anti-Spoofing & Liveness Detection:** 
-  * Active real-time randomized motor challenges (Blink, Turn Left, Turn Right, Nod Up) with Eye Aspect Ratio (EAR) tracking and Laplacian variance blur gating.
-* **Server-Side Shift Window & Punctuality Engine:**
-  * **Morning Cutoff:** 8:30 AM (Auto-calculates lateness in minutes via server-side PostgreSQL RPC).
-  * **Evening Departure:** 4:40 PM – 8:00 PM (Validated unrestricted clock-out).
-  * **Night Lockdown:** 8:00 PM – 12:00 AM (Restricted terminal state to prevent erratic scans).
-* **Multi-Tenant SaaS Architecture:**
-  * Complete isolation of organizations, departments, employees, biometric embeddings, and attendance logs.
-  * Multi-company workspace switcher and automated tenant provisioning on signup.
-* **Formatted Manager CSV Exports:**
-  * **Master Daily Attendance CSV:** Full event logs with neural confidence, liveness verification, and compliance remarks.
-  * **One-Click Late Audit CSV:** Filtered report of all late arrivals with exact lateness minutes, cutoff comparisons, and infraction severity ratings.
-  * **Monthly HR Payroll & Infractions CSV:** Working day compliance, punctuality percentage, and disciplinary tier ratings.
-* **Fully Responsive Telemetry Dashboard:**
-  * Auto-scaling Recharts analytics, live attendance counters, and employee roster management optimized for phones, tablets, and desktops.
+- **Real-Time Client-Side Facial Recognition:**
+  - Powered by `@vladmandic/face-api` (TinyFaceDetector + FaceLandmarks68 + FaceRecognitionNet).
+  - 100% Zero-Photo storage: only 128-dimensional mathematical vector descriptors are stored in PostgreSQL (`pgvector`).
+- **Active Anti-Spoofing & Liveness Detection:**
+  - Active real-time randomized motor challenges (Blink, Turn Left, Turn Right, Nod Up) with Eye Aspect Ratio (EAR) tracking and Laplacian variance blur gating.
+- **Server-Side Shift Window & Punctuality Engine:**
+  - **Morning Cutoff:** 8:30 AM (Auto-calculates lateness in minutes via server-side PostgreSQL RPC).
+  - **Evening Departure:** 4:40 PM – 8:00 PM (Validated unrestricted clock-out).
+  - **Night Lockdown:** 8:00 PM – 12:00 AM (Restricted terminal state to prevent erratic scans).
+- **Multi-Tenant SaaS Architecture:**
+  - Complete isolation of organizations, departments, employees, biometric embeddings, and attendance logs.
+  - Multi-company workspace switcher and automated tenant provisioning on signup.
+- **Formatted Manager CSV Exports:**
+  - **Master Daily Attendance CSV:** Full event logs with neural confidence, liveness verification, and compliance remarks.
+  - **One-Click Late Audit CSV:** Filtered report of all late arrivals with exact lateness minutes, cutoff comparisons, and infraction severity ratings.
+  - **Monthly HR Payroll & Infractions CSV:** Working day compliance, punctuality percentage, and disciplinary tier ratings.
+- **Fully Responsive Telemetry Dashboard:**
+  - Auto-scaling Recharts analytics, live attendance counters, and employee roster management optimized for phones, tablets, and desktops.
 
 ---
 
 ## 🛠️ Technology Stack
 
-| Layer | Technology |
-|---|---|
-| **Framework** | TanStack Start (React 19, `@tanstack/react-router`, `@tanstack/react-query`) |
-| **Server Engine** | Nitro (`cloudflare-module` preset) |
-| **Styling** | Vanilla Tailwind CSS Design System & Lucide Icons |
-| **Biometrics** | FaceNet 128-D Vector Embeddings & TinyFaceDetector |
-| **Database** | Supabase PostgreSQL with `pgvector` & Row-Level Security (RLS) |
-| **Auth & Security** | Supabase Auth (bcrypt, JWT), CSP, HSTS, X-Frame-Options, CSRF middleware |
+| Layer               | Technology                                                                   |
+| ------------------- | ---------------------------------------------------------------------------- |
+| **Framework**       | TanStack Start (React 19, `@tanstack/react-router`, `@tanstack/react-query`) |
+| **Server Engine**   | Nitro (`cloudflare-module` preset)                                           |
+| **Styling**         | Vanilla Tailwind CSS Design System & Lucide Icons                            |
+| **Biometrics**      | FaceNet 128-D Vector Embeddings & TinyFaceDetector                           |
+| **Database**        | Supabase PostgreSQL with `pgvector` & Row-Level Security (RLS)               |
+| **Auth & Security** | Supabase Auth (bcrypt, JWT), CSP, HSTS, X-Frame-Options, CSRF middleware     |
 
 ---
 
@@ -45,53 +45,60 @@ An enterprise-grade, privacy-first **Automated Biometric Attendance Management &
 Follow these steps to deploy SmileTime Pro for free on **Cloudflare Pages**:
 
 ### Step 1: Database Setup (Supabase)
+
 1. Create a free account at [supabase.com](https://supabase.com) and start a new project.
 2. In your Supabase dashboard, navigate to the **SQL Editor**.
 3. Open [`supabase/full_schema.sql`](./supabase/full_schema.sql) (or run the security script below) and click **Run**.
 4. Go to **Project Settings (gear icon)** → **API** to copy your **Project URL** and **anon public key**.
 
 ### Step 2: Connect to Cloudflare Pages
+
 1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) → **Compute (Workers & Pages)**.
 2. Click **Create application** → select the **Pages** tab → click **Connect to Git**.
 3. Select your repository: `oseibright537-max/smiletime-pro`.
 4. Click **Begin setup**.
 
 ### Step 3: Configure Build Settings
+
 Fill in the deployment settings:
-* **Project name:** `smiletime-pro`
-* **Production branch:** `main`
-* **Framework preset:** `None` (or `Vite`)
-* **Build command:**
+
+- **Project name:** `smiletime-pro`
+- **Production branch:** `main`
+- **Framework preset:** `None` (or `Vite`)
+- **Build command:**
   ```bash
   npm run build
   ```
-* **Build output directory:**
+- **Build output directory:**
   ```bash
   .output/public
   ```
-* **Root directory:** *(Leave blank)*
+- **Root directory:** _(Leave blank)_
 
 ### Step 4: Add Environment Variables
+
 Under **Environment variables (advanced)**, add:
 
-| Variable Name | Value |
-|---|---|
-| `VITE_SUPABASE_URL` | `https://your-project.supabase.co` |
+| Variable Name                   | Value                                     |
+| ------------------------------- | ----------------------------------------- |
+| `VITE_SUPABASE_URL`             | `https://your-project.supabase.co`        |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_...` (or your `anon` key) |
-| `SUPABASE_URL` | `https://your-project.supabase.co` |
-| `SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_...` (or your `anon` key) |
-| `NODE_VERSION` | `20` |
+| `SUPABASE_URL`                  | `https://your-project.supabase.co`        |
+| `SUPABASE_PUBLISHABLE_KEY`      | `sb_publishable_...` (or your `anon` key) |
+| `NODE_VERSION`                  | `20`                                      |
 
 ### Step 5: Deploy
+
 1. Click **Save and Deploy**.
 2. Cloudflare will build the application in ~1-2 minutes and provide your live URL (e.g. `https://smiletime-pro.pages.dev`).
 
 ### Step 6: Configure Supabase Auth URLs
+
 1. In your **Supabase Dashboard**, go to **Authentication** → **URL Configuration**.
 2. Set **Site URL** to: `https://smiletime-pro.pages.dev`
 3. Add to **Redirect URLs**:
-   * `https://smiletime-pro.pages.dev/**`
-   * `https://smiletime-pro.pages.dev/auth`
+   - `https://smiletime-pro.pages.dev/**`
+   - `https://smiletime-pro.pages.dev/auth`
 4. Click **Save**.
 
 ---
@@ -290,13 +297,14 @@ SmileTime Pro provides RFC 4180-compliant CSV exports with embedded UTF-8 Byte O
 
 ## 🛡️ Security & Privacy Compliance
 
-* **Zero Photo Ingestion:** No raw facial pictures or video streams are stored on servers or database disks.
-* **Vectorized pgvector:** Facial geometry is converted locally into 128-D floating point embeddings.
-* **Anti-Spoof Gating:** Prevents photo, video playback, and print attacks through dynamic multi-step challenges.
-* **Security Headers:** Enforces Content-Security-Policy (CSP), Strict-Transport-Security (HSTS), X-Frame-Options (DENY), and X-Content-Type-Options (nosniff).
-* **Dependency Health:** 0 high or critical npm vulnerabilities.
+- **Zero Photo Ingestion:** No raw facial pictures or video streams are stored on servers or database disks.
+- **Vectorized pgvector:** Facial geometry is converted locally into 128-D floating point embeddings.
+- **Anti-Spoof Gating:** Prevents photo, video playback, and print attacks through dynamic multi-step challenges.
+- **Security Headers:** Enforces Content-Security-Policy (CSP), Strict-Transport-Security (HSTS), X-Frame-Options (DENY), and X-Content-Type-Options (nosniff).
+- **Dependency Health:** 0 high or critical npm vulnerabilities.
 
 ---
 
 ## 📄 License
+
 MIT License. Created for enterprise biometric attendance and workforce intelligence.
