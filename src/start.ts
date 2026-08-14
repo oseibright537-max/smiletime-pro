@@ -18,31 +18,14 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
   }
 });
 
-const securityHeadersMiddleware = createMiddleware().server(async ({ next }) => {
-  const result = await next();
-  if (result instanceof Response) {
-    const headers = new Headers(result.headers);
-    headers.set("X-Frame-Options", "DENY");
-    headers.set("X-Content-Type-Options", "nosniff");
-    headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-    headers.set("Permissions-Policy", "camera=(self), microphone=(), geolocation=()");
-    headers.set(
-      "Content-Security-Policy",
-      "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none';",
-    );
-    if (process.env.NODE_ENV === "production") {
-      headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
-    }
-    return new Response(result.body, {
-      status: result.status,
-      statusText: result.statusText,
-      headers,
-    });
-  }
-  return result;
+// Start installs this automatically when src/start.ts is absent; defining the
+// file opts out, so re-add it explicitly to keep server functions protected
+// from cross-site requests.
+const csrfMiddleware = createCsrfMiddleware({
+  filter: (ctx) => ctx.handlerType === "serverFn",
 });
 
 export const startInstance = createStart(() => ({
   functionMiddleware: [attachSupabaseAuth],
-  requestMiddleware: [errorMiddleware, csrfMiddleware, securityHeadersMiddleware],
+  requestMiddleware: [errorMiddleware, csrfMiddleware],
 }));
