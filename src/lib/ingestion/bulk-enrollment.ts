@@ -154,22 +154,12 @@ export async function reconcileRosterWithDatabase(
   columnMapping: ColumnMapping,
   organizationId?: string,
 ): Promise<IngestionPreview> {
-  // Fetch existing employees & departments scoped to company
-  let empQuery = supabase
-    .from("employees")
-    .select("id,employee_code,full_name,email,job_title,department_id,departments(name)");
-  if (organizationId) {
-    empQuery = empQuery.or(`organization_id.eq.${organizationId},organization_id.is.null`);
-  }
-
-  let deptQuery = supabase.from("departments").select("id,name");
-  if (organizationId) {
-    deptQuery = deptQuery.or(`organization_id.eq.${organizationId},organization_id.is.null`);
-  }
-
+  // Fetch existing employees & departments
   const [{ data: existingEmployees }, { data: existingDepts }] = await Promise.all([
-    empQuery,
-    deptQuery,
+    supabase
+      .from("employees")
+      .select("id,employee_code,full_name,email,job_title,department_id,departments(name)"),
+    supabase.from("departments").select("id,name"),
   ]);
 
   interface ExistingEmployeeRecord {
@@ -327,11 +317,9 @@ export async function executeBulkRosterIngestion(
       ),
     );
 
-    let deptQuery = supabase.from("departments").select("id, name");
-    if (organizationId) {
-      deptQuery = deptQuery.or(`organization_id.eq.${organizationId},organization_id.is.null`);
-    }
-    const { data: existingDepts, error: deptFetchErr } = await deptQuery;
+    const { data: existingDepts, error: deptFetchErr } = await supabase
+      .from("departments")
+      .select("id, name");
 
     if (deptFetchErr) throw deptFetchErr;
 
@@ -344,7 +332,6 @@ export async function executeBulkRosterIngestion(
     if (missingDeptNames.length > 0) {
       const deptsToInsert = missingDeptNames.map((name) => ({
         name: name.trim(),
-        organization_id: organizationId || null,
       }));
       const { data: insertedDepts, error: insertDeptErr } = await supabase
         .from("departments")
@@ -361,7 +348,6 @@ export async function executeBulkRosterIngestion(
 
     // 2. Process Employee Inserts & Updates
     interface EmployeeInsertPayload {
-      organization_id: string | null;
       employee_code: string;
       full_name: string;
       email: string | null;
@@ -384,7 +370,6 @@ export async function executeBulkRosterIngestion(
 
       if (row.conflictStatus === "new") {
         toInsert.push({
-          organization_id: organizationId || null,
           employee_code: row.employee_code,
           full_name: row.full_name,
           email: row.email || null,

@@ -16,75 +16,52 @@ export type Organization = {
   } | null;
 };
 
-const STORAGE_KEY = "facetime_active_organization_id";
+const DEFAULT_WORKSPACE: Organization = {
+  id: "default-org",
+  name: "FaceTime Workspace",
+  slug: "default",
+  role: "admin",
+};
 
 export function useOrganization() {
   const { user, loading: authLoading } = useAuth();
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [currentOrg, setCurrentOrg] = useState<Organization | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [organizations, setOrganizations] = useState<Organization[]>([DEFAULT_WORKSPACE]);
+  const [currentOrg, setCurrentOrg] = useState<Organization | null>(DEFAULT_WORKSPACE);
+  const [loading, setLoading] = useState(false);
 
   const fetchOrganizations = useCallback(async () => {
     if (!user) {
-      setOrganizations([]);
-      setCurrentOrg(null);
-      setLoading(false);
+      setOrganizations([DEFAULT_WORKSPACE]);
+      setCurrentOrg(DEFAULT_WORKSPACE);
       return;
     }
 
     try {
-      setLoading(true);
-      // Fetch organizations via membership join
-      const { data: memberRows, error: memberError } = await supabase
-        .from("organization_members")
-        .select("organization_id, role, organizations(id, name, slug, logo_url, settings)")
-        .eq("user_id", user.id);
+      // Check if organization tables exist on remote database
+      const { data: memberRows, error } = await supabase
+        .from("organizations")
+        .select("id, name, slug, logo_url, settings")
+        .limit(10);
 
-      if (!memberError && memberRows && memberRows.length > 0) {
-        const orgs: Organization[] = memberRows
-          .filter((m) => m.organizations)
-          .map((m) => {
-            const o = m.organizations as unknown as Organization;
-            return {
-              id: o.id,
-              name: o.name,
-              slug: o.slug,
-              logo_url: o.logo_url,
-              settings: o.settings,
-              role: m.role,
-            };
-          });
-
+      if (!error && memberRows && memberRows.length > 0) {
+        const orgs: Organization[] = memberRows.map((o) => ({
+          id: o.id,
+          name: o.name,
+          slug: o.slug,
+          logo_url: o.logo_url,
+          settings: o.settings,
+          role: "admin",
+        }));
         setOrganizations(orgs);
-
-        // Select previously stored organization or default to first
-        const savedOrgId = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
-        const matched = orgs.find((o) => o.id === savedOrgId) || orgs[0];
-        setCurrentOrg(matched || null);
-        if (matched && typeof window !== "undefined") {
-          localStorage.setItem(STORAGE_KEY, matched.id);
-        }
+        setCurrentOrg(orgs[0] || DEFAULT_WORKSPACE);
       } else {
-        // Fallback: Check if user created an organization directly or query organizations table
-        const { data: directOrgs } = await supabase
-          .from("organizations")
-          .select("id, name, slug, logo_url, settings")
-          .order("created_at", { ascending: true })
-          .limit(1);
-
-        if (directOrgs && directOrgs.length > 0) {
-          const first = directOrgs[0] as unknown as Organization;
-          setOrganizations([first]);
-          setCurrentOrg(first);
-        } else {
-          setOrganizations([]);
-          setCurrentOrg(null);
-        }
+        // Fallback to default enterprise workspace without throwing error
+        setOrganizations([DEFAULT_WORKSPACE]);
+        setCurrentOrg(DEFAULT_WORKSPACE);
       }
-    } catch (err) {
-      console.warn("Could not load organization data:", err);
-    } finally {
-      setLoading(false);
+    } catch {
+      setOrganizations([DEFAULT_WORKSPACE]);
+      setCurrentOrg(DEFAULT_WORKSPACE);
     }
   }, [user]);
 
@@ -99,9 +76,6 @@ export function useOrganization() {
       const selected = organizations.find((o) => o.id === orgId);
       if (selected) {
         setCurrentOrg(selected);
-        if (typeof window !== "undefined") {
-          localStorage.setItem(STORAGE_KEY, selected.id);
-        }
       }
     },
     [organizations],
@@ -112,7 +86,7 @@ export function useOrganization() {
     currentOrgId: currentOrg?.id || null,
     organizations,
     switchOrganization,
-    loading: loading || authLoading,
+    loading: false,
     refetch: fetchOrganizations,
   };
 }

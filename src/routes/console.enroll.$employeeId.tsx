@@ -142,6 +142,35 @@ function Enroll() {
     };
   }, [stop, uploadPreview]);
 
+  // Guided 5-Angle Mode Saver
+  const saveGuidedTemplates = useCallback(async () => {
+    const session = sessionRef.current;
+    setSaving(true);
+    try {
+      const rows = session.templates().map((t) => ({
+        employee_id: employeeId,
+        pose: t.pose,
+        quality: t.quality,
+        model: "face-api/facenet-128",
+        embedding: toVectorLiteral(t.descriptor) as unknown as string,
+      }));
+      if (rows.length === 0) throw new Error("No usable frames were captured.");
+
+      await supabase.from("face_embeddings").delete().eq("employee_id", employeeId);
+      const { error: insertError } = await supabase.from("face_embeddings").insert(rows);
+      if (insertError) throw insertError;
+
+      toast.success("Multi-angle face templates enrolled successfully!");
+      stop();
+      navigate({ to: "/console/employees" });
+    } catch (e) {
+      doneRef.current = false;
+      toast.error((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }, [employeeId, navigate, stop]);
+
   // Live detection loop for Camera Snapshot mode & Guided mode
   useEffect(() => {
     if (!active || !modelsReady) return;
@@ -186,7 +215,7 @@ function Enroll() {
       loopRef.current = false;
       cancelAnimationFrame(raf);
     };
-  }, [active, modelsReady, tab, videoRef]);
+  }, [active, modelsReady, tab, videoRef, saveGuidedTemplates]);
 
   // Handle Tab Switch
   const handleTabChange = (newTab: EnrollTab) => {
@@ -241,7 +270,6 @@ function Enroll() {
 
       // 2. Insert new 128-D vector literal
       const { error } = await supabase.from("face_embeddings").insert({
-        organization_id: currentOrgId || null,
         employee_id: employeeId,
         pose: poseLabel,
         quality: capturedQuality ? capturedQuality / 100 : 0.95,
@@ -292,36 +320,6 @@ function Enroll() {
       toast.error((err as Error).message);
     } finally {
       setUploadProcessing(false);
-    }
-  };
-
-  // 3. Guided 5-Angle Mode Saver
-  const saveGuidedTemplates = async () => {
-    const session = sessionRef.current;
-    setSaving(true);
-    try {
-      const rows = session.templates().map((t) => ({
-        organization_id: currentOrgId || null,
-        employee_id: employeeId,
-        pose: t.pose,
-        quality: t.quality,
-        model: "face-api/facenet-128",
-        embedding: toVectorLiteral(t.descriptor) as unknown as string,
-      }));
-      if (rows.length === 0) throw new Error("No usable frames were captured.");
-
-      await supabase.from("face_embeddings").delete().eq("employee_id", employeeId);
-      const { error: insertError } = await supabase.from("face_embeddings").insert(rows);
-      if (insertError) throw insertError;
-
-      toast.success("Multi-angle face templates enrolled successfully!");
-      stop();
-      navigate({ to: "/console/employees" });
-    } catch (e) {
-      doneRef.current = false;
-      toast.error((e as Error).message);
-    } finally {
-      setSaving(false);
     }
   };
 

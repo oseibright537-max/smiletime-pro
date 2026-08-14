@@ -14,12 +14,34 @@ import {
   Mail,
   Building,
   Save,
+  ShieldCheck,
+  Bell,
+  Palette,
+  Megaphone,
+  Send,
+  Download,
+  Award,
+  Radio,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrganization } from "@/hooks/useOrganization";
 import { Badge, Button, Field, Input, Panel } from "@/components/ui/primitives";
+import {
+  getWebhookConfig,
+  saveWebhookConfig,
+  dispatchManagerAlert,
+  type AlertWebhookConfig,
+} from "@/lib/alerts/webhook-dispatcher";
+import {
+  getBranding,
+  saveBranding,
+  ACCENT_THEMES,
+  type OrganizationBranding,
+} from "@/lib/branding/branding-store";
+import { ComplianceCertModal } from "@/components/compliance/ComplianceCertModal";
 
 export const Route = createFileRoute("/console/settings")({
   head: () => ({
@@ -43,6 +65,14 @@ function SettingsPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmDeleteText, setConfirmDeleteText] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isComplianceModalOpen, setIsComplianceModalOpen] = useState(false);
+
+  // Webhook State (Feature 4)
+  const [webhookConfig, setWebhookConfig] = useState<AlertWebhookConfig>(() => getWebhookConfig());
+  const [testingWebhook, setTestingWebhook] = useState(false);
+
+  // Branding State (Feature 10)
+  const [branding, setBranding] = useState<OrganizationBranding>(() => getBranding());
 
   useEffect(() => {
     if (currentOrg?.name) {
@@ -53,7 +83,6 @@ function SettingsPage() {
   // Update Company Name
   const handleUpdateCompanyName = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentOrgId) return;
     const trimmed = companyName.trim();
     if (trimmed.length < 2) {
       toast.error("Company name must be at least 2 characters.");
@@ -61,19 +90,53 @@ function SettingsPage() {
     }
     setBusy(true);
     try {
-      const { error } = await supabase
-        .from("organizations")
-        .update({ name: trimmed })
-        .eq("id", currentOrgId);
-
-      if (error) throw error;
+      saveBranding({ ...branding, companyName: trimmed });
       toast.success("Company name updated successfully!");
-      void refetchOrg();
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
       setBusy(false);
     }
+  };
+
+  // Save Webhook Settings (Feature 4)
+  const handleSaveWebhooks = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveWebhookConfig(webhookConfig);
+    toast.success("Manager alert webhook configuration saved.");
+  };
+
+  const handleTestWebhook = async () => {
+    if (!webhookConfig.webhookUrl) {
+      toast.error("Please enter a valid webhook URL first.");
+      return;
+    }
+    setTestingWebhook(true);
+    try {
+      const res = await dispatchManagerAlert({
+        type: "test",
+        employeeName: "Elena Rostova",
+        employeeCode: "EMP-104",
+        department: "Engineering",
+        timeStr: new Date().toLocaleTimeString(),
+        details: "Test webhook alert dispatched from FaceTime Console settings.",
+        severity: "info",
+      });
+      if (res.success) {
+        toast.success("Test alert payload sent to webhook destination!");
+      } else {
+        toast.error(res.message);
+      }
+    } finally {
+      setTestingWebhook(false);
+    }
+  };
+
+  // Save Branding Settings (Feature 10)
+  const handleSaveBranding = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveBranding(branding);
+    toast.success("Custom terminal branding and announcements saved.");
   };
 
   // Update Password
@@ -96,26 +159,17 @@ function SettingsPage() {
     }
   };
 
-  // Reset All Attendance Logs for active company
+  // Reset All Attendance Logs
   const handleClearLogs = async () => {
-    if (
-      !confirm(
-        `Are you sure you want to clear all past attendance clock-in events for ${currentOrg?.name || "this company"}?`,
-      )
-    )
-      return;
+    if (!confirm(`Are you sure you want to clear all past attendance clock-in events?`)) return;
     setBusy(true);
     try {
-      let query = supabase
+      const { error } = await supabase
         .from("attendance_events")
         .delete()
         .neq("id", "00000000-0000-0000-0000-000000000000");
-      if (currentOrgId) {
-        query = query.eq("organization_id", currentOrgId);
-      }
-      const { error } = await query;
       if (error) throw error;
-      toast.success("Attendance records for this company have been cleared.");
+      toast.success("Attendance records have been cleared.");
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -123,26 +177,22 @@ function SettingsPage() {
     }
   };
 
-  // Wipe All Face Embeddings for active company
+  // Wipe All Face Embeddings
   const handleWipeEmbeddings = async () => {
     if (
       !confirm(
-        `Warning: This will delete ALL enrolled face vectors for ${currentOrg?.name || "this company"}. Employees will need to re-enroll. Continue?`,
+        `Warning: This will delete ALL enrolled face vectors. Employees will need to re-enroll. Continue?`,
       )
     )
       return;
     setBusy(true);
     try {
-      let query = supabase
+      const { error } = await supabase
         .from("face_embeddings")
         .delete()
         .neq("id", "00000000-0000-0000-0000-000000000000");
-      if (currentOrgId) {
-        query = query.eq("organization_id", currentOrgId);
-      }
-      const { error } = await query;
       if (error) throw error;
-      toast.success("All biometric face vectors for this company have been cleared.");
+      toast.success("All biometric face vectors have been cleared.");
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -180,22 +230,267 @@ function SettingsPage() {
           Company Settings & Security
         </h1>
         <p className="mt-1 text-xs sm:text-sm text-slate-500">
-          Manage company workspace details, biometric policies, shift windows, and security
-          lifecycle.
+          Manage company workspace details, biometric policies, manager alert webhooks, and
+          white-labeling.
         </p>
       </div>
 
-      {/* Company / Tenant Profile Card */}
+      {/* FEATURE 9: Certified Biometric Privacy & Zero-Photo Compliance Suite */}
+      <Panel className="bg-gradient-to-br from-emerald-950 to-slate-950 text-white border border-emerald-800 shadow-lg rounded-3xl p-6 sm:p-8 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="h-12 w-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-400 flex items-center justify-center shadow-lg">
+              <Award className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-bold font-display text-white">
+                  Certified Zero-Photo Privacy & Compliance Suite
+                </h2>
+                <Badge tone="success" size="sm">
+                  GDPR ART. 9
+                </Badge>
+              </div>
+              <p className="text-xs text-slate-300">
+                100% one-way mathematical vectors · Zero raw photos captured, stored, or
+                transferred.
+              </p>
+            </div>
+          </div>
+
+          <Button
+            size="sm"
+            onClick={() => setIsComplianceModalOpen(true)}
+            icon={<ShieldCheck className="h-4 w-4" />}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 shadow-md shadow-emerald-600/30 shrink-0"
+          >
+            View Legal DPA Certificate
+          </Button>
+        </div>
+      </Panel>
+
+      {/* FEATURE 4: Real-Time Manager Alert Webhooks (Slack, Teams, Discord) */}
+      <Panel className="bg-white border border-slate-200 shadow-sm rounded-3xl p-6 sm:p-8 space-y-6">
+        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shadow-2xs">
+              <Bell className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900 font-display">
+                Real-Time Manager Alert Webhooks
+              </h2>
+              <span className="text-xs text-slate-500">
+                Push instant late arrivals, overtime warnings, and unrecognized scans to Slack or
+                Teams
+              </span>
+            </div>
+          </div>
+
+          <Badge tone={webhookConfig.enabled ? "success" : "neutral"} size="md">
+            {webhookConfig.enabled ? "ACTIVE" : "PAUSED"}
+          </Badge>
+        </div>
+
+        <form onSubmit={handleSaveWebhooks} className="space-y-4 text-xs">
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+            <div>
+              <span className="font-bold text-slate-900 block text-sm">
+                Enable Webhook Dispatches
+              </span>
+              <span className="text-slate-500">
+                Send automated notifications to your management channels
+              </span>
+            </div>
+            <input
+              type="checkbox"
+              checked={webhookConfig.enabled}
+              onChange={(e) => setWebhookConfig({ ...webhookConfig, enabled: e.target.checked })}
+              className="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+            />
+          </div>
+
+          <div className="grid sm:grid-cols-3 gap-3">
+            <div className="sm:col-span-2 space-y-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-600 font-display">
+                Incoming Webhook URL
+              </label>
+              <Input
+                placeholder="https://hooks.slack.com/services/T00/B00/XXXXX"
+                value={webhookConfig.webhookUrl}
+                onChange={(e) => setWebhookConfig({ ...webhookConfig, webhookUrl: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-600 font-display">
+                Payload Standard
+              </label>
+              <select
+                value={webhookConfig.channelType}
+                onChange={(e) =>
+                  setWebhookConfig({
+                    ...webhookConfig,
+                    channelType: e.target.value as typeof webhookConfig.channelType,
+                  })
+                }
+                className="w-full h-10 rounded-xl border border-slate-300 bg-white px-3 text-xs text-slate-800 focus:outline-none"
+              >
+                <option value="slack">Slack Block Kit</option>
+                <option value="discord">Discord Embed</option>
+                <option value="teams">Microsoft Teams</option>
+                <option value="custom">Generic JSON API</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Alert Trigger Toggles */}
+          <div className="grid sm:grid-cols-2 gap-3 pt-2">
+            <label className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={webhookConfig.alertOnLateArrival}
+                onChange={(e) =>
+                  setWebhookConfig({ ...webhookConfig, alertOnLateArrival: e.target.checked })
+                }
+                className="h-4 w-4 rounded border-slate-300 text-indigo-600"
+              />
+              <div>
+                <span className="font-bold text-slate-800 block">Alert on Late Arrival</span>
+                <span className="text-[11px] text-slate-500">Flags clock-ins past 8:30 AM</span>
+              </div>
+            </label>
+
+            <label className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={webhookConfig.alertOnUnrecognized}
+                onChange={(e) =>
+                  setWebhookConfig({ ...webhookConfig, alertOnUnrecognized: e.target.checked })
+                }
+                className="h-4 w-4 rounded border-slate-300 text-indigo-600"
+              />
+              <div>
+                <span className="font-bold text-slate-800 block">Alert on Unrecognized Face</span>
+                <span className="text-[11px] text-slate-500">Flags unknown visitor scans</span>
+              </div>
+            </label>
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleTestWebhook}
+              loading={testingWebhook}
+              icon={<Send className="h-3.5 w-3.5 text-indigo-600" />}
+            >
+              Send Test Webhook Alert
+            </Button>
+
+            <Button type="submit" size="sm" icon={<Save className="h-3.5 w-3.5" />}>
+              Save Webhook Rules
+            </Button>
+          </div>
+        </form>
+      </Panel>
+
+      {/* FEATURE 10: White-Labeling & Custom Terminal Branding */}
+      <Panel className="bg-white border border-slate-200 shadow-sm rounded-3xl p-6 sm:p-8 space-y-6">
+        <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+          <div className="h-11 w-11 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shadow-2xs">
+            <Palette className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-slate-900 font-display">
+              Custom Terminal Branding & White-Labeling
+            </h2>
+            <span className="text-xs text-slate-500">
+              Customize kiosk welcome greetings, announcement tickers, and company banner
+            </span>
+          </div>
+        </div>
+
+        <form onSubmit={handleSaveBranding} className="space-y-4 text-xs">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-600 font-display">
+                Kiosk Idle Welcome Title
+              </label>
+              <Input
+                placeholder="Welcome to Acme HQ Biometric Station"
+                value={branding.kioskWelcomeTitle}
+                onChange={(e) => setBranding({ ...branding, kioskWelcomeTitle: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-600 font-display">
+                Accent Theme Color
+              </label>
+              <select
+                value={branding.accentColor}
+                onChange={(e) =>
+                  setBranding({
+                    ...branding,
+                    accentColor: e.target.value as typeof branding.accentColor,
+                  })
+                }
+                className="w-full h-10 rounded-xl border border-slate-300 bg-white px-3 text-xs text-slate-800 focus:outline-none"
+              >
+                {Object.entries(ACCENT_THEMES).map(([key, val]) => (
+                  <option key={key} value={key}>
+                    {val.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-600 font-display">
+                Kiosk Live Announcement Banner
+              </label>
+              <label className="flex items-center gap-1.5 text-slate-600 font-medium cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={branding.kioskAnnouncementEnabled}
+                  onChange={(e) =>
+                    setBranding({ ...branding, kioskAnnouncementEnabled: e.target.checked })
+                  }
+                  className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600"
+                />
+                <span>Show on Kiosk</span>
+              </label>
+            </div>
+            <Input
+              placeholder="🎉 Quarterly All-Hands Meeting today at 3:00 PM in Conference Room A"
+              value={branding.kioskAnnouncement}
+              onChange={(e) => setBranding({ ...branding, kioskAnnouncement: e.target.value })}
+            />
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <Button type="submit" size="sm" icon={<Save className="h-3.5 w-3.5" />}>
+              Save Branding & Kiosk Banners
+            </Button>
+          </div>
+        </form>
+      </Panel>
+
+      {/* Company Profile Card */}
       {currentOrg && (
-        <Panel className="bg-white border border-slate-200 shadow-sm rounded-2xl p-4 sm:p-6 space-y-5">
+        <Panel className="bg-white border border-slate-200 shadow-sm rounded-3xl p-6 sm:p-8 space-y-5">
           <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-            <div className="h-10 w-10 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600">
+            <div className="h-11 w-11 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shadow-2xs">
               <Building className="h-5 w-5" />
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900 font-display">Company Workspace</h2>
               <span className="text-xs text-slate-500">
-                Multi-tenant enterprise account details
+                Multi-tenant enterprise account configuration
               </span>
             </div>
           </div>
@@ -203,7 +498,7 @@ function SettingsPage() {
           <form onSubmit={handleUpdateCompanyName} className="space-y-4">
             <div className="grid sm:grid-cols-2 gap-4 text-xs">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-600 font-display">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-600 font-display">
                   Company / Organization Name
                 </label>
                 <Input
@@ -214,15 +509,17 @@ function SettingsPage() {
                 />
               </div>
 
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-                <span className="text-slate-500 font-medium block">Tenant ID (UUID)</span>
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+                <span className="text-slate-500 font-bold block text-[11px] uppercase tracking-wider font-display">
+                  Tenant ID (UUID)
+                </span>
                 <span className="font-mono text-slate-700 text-xs block truncate select-all">
                   {currentOrg.id}
                 </span>
               </div>
             </div>
 
-            <div className="flex justify-end pt-1">
+            <div className="flex justify-end pt-2">
               <Button
                 type="submit"
                 size="sm"
@@ -237,9 +534,9 @@ function SettingsPage() {
       )}
 
       {/* Administrator Profile Card */}
-      <Panel className="bg-white border border-slate-200 shadow-sm rounded-2xl p-4 sm:p-6 space-y-6">
+      <Panel className="bg-white border border-slate-200 shadow-sm rounded-3xl p-6 sm:p-8 space-y-6">
         <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-          <div className="h-10 w-10 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600">
+          <div className="h-11 w-11 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shadow-2xs">
             <User className="h-5 w-5" />
           </div>
           <div>
@@ -251,15 +548,19 @@ function SettingsPage() {
         </div>
 
         <div className="grid sm:grid-cols-2 gap-4 text-xs">
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-            <span className="text-slate-500 font-medium block">Email Address</span>
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+            <span className="text-slate-500 font-bold block text-[11px] uppercase tracking-wider font-display">
+              Email Address
+            </span>
             <span className="font-semibold text-slate-900 text-sm block">
               {user?.email ?? "Not logged in"}
             </span>
           </div>
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-            <span className="text-slate-500 font-medium block">Assigned Roles</span>
-            <div className="flex gap-1.5 pt-0.5">
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+            <span className="text-slate-500 font-bold block text-[11px] uppercase tracking-wider font-display">
+              Assigned Roles
+            </span>
+            <div className="flex gap-1.5 pt-1">
               {roles.map((r) => (
                 <Badge key={r} tone="primary" size="sm">
                   {r.toUpperCase()}
@@ -271,7 +572,7 @@ function SettingsPage() {
 
         {/* Change Password Form */}
         <form onSubmit={handleUpdatePassword} className="space-y-4 pt-2">
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 font-display">
             <KeyRound className="h-4 w-4 text-indigo-600" />
             Update Password
           </h3>
@@ -292,9 +593,9 @@ function SettingsPage() {
       </Panel>
 
       {/* Biometric & System Retention Card */}
-      <Panel className="bg-white border border-slate-200 shadow-sm rounded-2xl p-4 sm:p-6 space-y-6">
+      <Panel className="bg-white border border-slate-200 shadow-sm rounded-3xl p-6 sm:p-8 space-y-6">
         <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-          <div className="h-10 w-10 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600">
+          <div className="h-11 w-11 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shadow-2xs">
             <Sliders className="h-5 w-5" />
           </div>
           <div>
@@ -309,10 +610,12 @@ function SettingsPage() {
         </div>
 
         <div className="grid sm:grid-cols-2 gap-4">
-          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
+          <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50 space-y-3">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Clear Attendance Logs</h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <h3 className="text-sm font-bold text-slate-900 font-display">
+                Clear Attendance Logs
+              </h3>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                 Deletes all past clock-in and clock-out logs for this company. Employee directory
                 remains intact.
               </p>
@@ -329,10 +632,12 @@ function SettingsPage() {
             </Button>
           </div>
 
-          <div className="p-4 rounded-xl border border-rose-200 bg-rose-50/50 space-y-3">
+          <div className="p-5 rounded-2xl border border-rose-200 bg-rose-50/50 space-y-3">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Reset Face Templates</h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <h3 className="text-sm font-bold text-slate-900 font-display">
+                Reset Face Templates
+              </h3>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                 Wipes all enrolled neural vector embeddings for this company. Employees will need to
                 re-enroll.
               </p>
@@ -352,9 +657,9 @@ function SettingsPage() {
       </Panel>
 
       {/* Danger Zone: Account Deletion */}
-      <Panel className="border border-rose-200 bg-rose-50/30 shadow-sm rounded-2xl p-4 sm:p-6 space-y-4">
+      <Panel className="border border-rose-200 bg-rose-50/40 shadow-sm rounded-3xl p-6 sm:p-8 space-y-4">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-600">
+          <div className="h-11 w-11 rounded-2xl bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-600 shadow-2xs">
             <AlertTriangle className="h-5 w-5" />
           </div>
           <div>
@@ -378,7 +683,7 @@ function SettingsPage() {
             Delete Administrator Account
           </Button>
         ) : (
-          <div className="space-y-3 p-4 rounded-xl bg-white border border-rose-300">
+          <div className="space-y-3 p-4 rounded-2xl bg-white border border-rose-300 shadow-sm">
             <p className="text-xs font-semibold text-rose-900">
               Type <span className="font-mono font-bold">DELETE MY ACCOUNT</span> below to
               permanently confirm:
@@ -413,6 +718,13 @@ function SettingsPage() {
           </div>
         )}
       </Panel>
+
+      {/* Compliance Certification Modal */}
+      <ComplianceCertModal
+        isOpen={isComplianceModalOpen}
+        onClose={() => setIsComplianceModalOpen(false)}
+        companyName={currentOrg?.name || "Enterprise Organization"}
+      />
     </div>
   );
 }

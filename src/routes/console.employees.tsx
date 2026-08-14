@@ -22,7 +22,6 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useOrganization } from "@/hooks/useOrganization";
 import { Badge, Button, Field, Input, Panel, Select } from "@/components/ui/primitives";
 import { BulkEnrollmentModal } from "@/components/employees/BulkEnrollmentModal";
 import { DeleteEmployeeModal } from "@/components/employees/DeleteEmployeeModal";
@@ -52,7 +51,6 @@ const employeeSchema = z.object({
 
 function Employees() {
   const { isStaff } = useAuth();
-  const { currentOrgId } = useOrganization();
   const qc = useQueryClient();
   const [form, setForm] = useState({
     employee_code: "",
@@ -76,33 +74,31 @@ function Employees() {
   } | null>(null);
 
   const departments = useQuery({
-    queryKey: ["departments", currentOrgId],
+    queryKey: ["departments"],
     queryFn: async () => {
-      let q = supabase.from("departments").select("*").order("name");
-      if (currentOrgId) {
-        q = q.or(`organization_id.eq.${currentOrgId},organization_id.is.null`);
-      }
-      return (await q).data ?? [];
+      const { data, error } = await supabase.from("departments").select("*").order("name");
+      if (error) throw error;
+      return data ?? [];
     },
   });
 
   const employees = useQuery({
-    queryKey: ["employees", currentOrgId],
+    queryKey: ["employees"],
     queryFn: async () => {
-      let empQ = supabase
-        .from("employees")
-        .select("id,employee_code,full_name,email,job_title,status,department_id,departments(name)")
-        .order("created_at", { ascending: false });
-      if (currentOrgId) {
-        empQ = empQ.or(`organization_id.eq.${currentOrgId},organization_id.is.null`);
-      }
+      const [{ data: rows, error: empErr }, { data: templates, error: faceErr }] =
+        await Promise.all([
+          supabase
+            .from("employees")
+            .select(
+              "id,employee_code,full_name,email,job_title,status,department_id,departments(name)",
+            )
+            .order("created_at", { ascending: false }),
+          supabase.from("face_embeddings").select("employee_id"),
+        ]);
 
-      let faceQ = supabase.from("face_embeddings").select("employee_id");
-      if (currentOrgId) {
-        faceQ = faceQ.or(`organization_id.eq.${currentOrgId},organization_id.is.null`);
-      }
+      if (empErr) throw empErr;
+      if (faceErr) throw faceErr;
 
-      const [{ data: rows }, { data: templates }] = await Promise.all([empQ, faceQ]);
       const counts = new Map<string, number>();
       (templates ?? []).forEach((t) =>
         counts.set(t.employee_id, (counts.get(t.employee_id) ?? 0) + 1),
@@ -115,12 +111,12 @@ function Employees() {
     mutationFn: async () => {
       const parsed = employeeSchema.parse(form);
       const { error } = await supabase.from("employees").insert({
-        organization_id: currentOrgId || null,
         employee_code: parsed.employee_code,
         full_name: parsed.full_name,
         email: parsed.email || null,
         job_title: parsed.job_title || null,
         department_id: parsed.department_id || null,
+        status: "active",
       });
       if (error) throw error;
     },
@@ -128,7 +124,8 @@ function Employees() {
       toast.success("Employee created successfully");
       setForm({ employee_code: "", full_name: "", email: "", job_title: "", department_id: "" });
       setIsAdding(false);
-      qc.invalidateQueries({ queryKey: ["employees", currentOrgId] });
+      qc.invalidateQueries({ queryKey: ["employees"] });
+      qc.invalidateQueries({ queryKey: ["overview"] });
     },
     onError: (e) =>
       toast.error(e instanceof z.ZodError ? e.issues[0]!.message : (e as Error).message),
@@ -139,7 +136,6 @@ function Employees() {
       const name = newDept.trim();
       if (name.length < 2) throw new Error("Department name must be at least 2 characters");
       const { error } = await supabase.from("departments").insert({
-        organization_id: currentOrgId || null,
         name,
       });
       if (error) throw error;
@@ -161,28 +157,27 @@ function Employees() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Face templates reset. Employee must re-enrol.");
+      toast.success("Biometric template reset");
       qc.invalidateQueries({ queryKey: ["employees"] });
     },
     onError: (e) => toast.error((e as Error).message),
   });
 
   const deleteEmployee = useMutation({
-    mutationFn: async (employeeId: string) => {
-      const { error } = await supabase.from("employees").delete().eq("id", employeeId);
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("employees").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Employee permanently deleted");
+      toast.success("Employee deleted permanently");
       setEmployeeToDelete(null);
       qc.invalidateQueries({ queryKey: ["employees"] });
       qc.invalidateQueries({ queryKey: ["overview"] });
-      qc.invalidateQueries({ queryKey: ["report_employees"] });
     },
     onError: (e) => toast.error((e as Error).message),
   });
 
-  const filteredEmployees = (employees.data ?? []).filter((e) => {
+  const filtered = (employees.data ?? []).filter((e) => {
     const matchesSearch =
       e.full_name.toLowerCase().includes(search.toLowerCase()) ||
       e.employee_code.toLowerCase().includes(search.toLowerCase()) ||
@@ -191,36 +186,30 @@ function Employees() {
     return matchesSearch && matchesDept;
   });
 
-  const exportDirectoryCsv = () => {
-    const list = employees.data ?? [];
-    if (list.length === 0) return;
+  const exportRosterCsv = () => {
+    if (!employees.data || employees.data.length === 0) return;
     const headers = [
       "Employee Code",
       "Full Name",
-      "Email",
+      "Email Address",
       "Job Title",
       "Department",
+      "Biometric Templates Enrolled",
       "Status",
-      "Enrolled Templates",
     ];
-    const rows = list.map((e) => {
-      const dept = (e.departments as { name: string } | null)?.name ?? "Unassigned";
-      return [
-        e.employee_code,
-        e.full_name,
-        e.email ?? "",
-        e.job_title ?? "",
-        dept,
-        e.status.toUpperCase(),
-        e.templates,
-      ];
-    });
+
+    const rows = (employees.data ?? []).map((e) => [
+      e.employee_code,
+      e.full_name,
+      e.email ?? "—",
+      e.job_title ?? "—",
+      (e.departments as { name: string } | null)?.name ?? "General",
+      e.templates,
+      e.status,
+    ]);
 
     const csvContent = generateCsvString(headers, rows);
-    downloadCsvBlob(
-      `facetime_workforce_directory_${new Date().toISOString().slice(0, 10)}.csv`,
-      csvContent,
-    );
+    downloadCsvBlob(`workforce_roster_${new Date().toISOString().slice(0, 10)}.csv`, csvContent);
   };
 
   return (
@@ -228,114 +217,120 @@ function Employees() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 font-display">
               Workforce Directory
             </h1>
-            <Badge tone="primary" size="sm">
-              {employees.data?.length ?? 0} TOTAL
+            <Badge tone="primary" size="md">
+              {employees.data?.length ?? 0} ACTIVE PROFILES
             </Badge>
           </div>
           <p className="mt-1 text-xs sm:text-sm text-slate-500">
-            Register employees, upload master HR rosters, or enrol facial profiles for instant
-            attendance.
+            Manage employee identities, biometric enrollment suites, and team departments.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={exportDirectoryCsv}
-            disabled={(employees.data?.length ?? 0) === 0}
-            icon={<Download className="h-4 w-4 text-indigo-600" />}
-            className="flex-1 sm:flex-none justify-center"
-          >
-            Export Directory CSV
-          </Button>
-          {isStaff && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsBulkModalOpen(true)}
-                icon={<FileSpreadsheet className="h-4 w-4 text-indigo-600" />}
-                className="flex-1 sm:flex-none justify-center"
-              >
-                Bulk Ingest Roster
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => setIsAdding(!isAdding)}
-                icon={<UserPlus className="h-4 w-4" />}
-                className="w-full sm:w-auto justify-center"
-              >
-                {isAdding ? "Close Form" : "New Employee"}
-              </Button>
-            </>
-          )}
-        </div>
+        {isStaff && (
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportRosterCsv}
+              disabled={!employees.data || employees.data.length === 0}
+              icon={<Download className="h-4 w-4 text-slate-600" />}
+              className="flex-1 sm:flex-none justify-center"
+            >
+              Export Roster
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsBulkModalOpen(true)}
+              icon={<UploadCloud className="h-4 w-4 text-indigo-600" />}
+              className="flex-1 sm:flex-none justify-center bg-indigo-50/50 hover:bg-indigo-100 border-indigo-200 text-indigo-950 font-bold"
+            >
+              Bulk Import CSV
+            </Button>
+
+            <Button
+              size="sm"
+              onClick={() => setIsAdding(!isAdding)}
+              icon={<UserPlus className="h-4 w-4" />}
+              className="w-full sm:w-auto justify-center shadow-sm shadow-indigo-600/20"
+            >
+              {isAdding ? "Cancel Registration" : "Add Employee"}
+            </Button>
+          </div>
+        )}
       </div>
 
-      {/* Bulk Roster Ingestion Modal */}
-      <BulkEnrollmentModal isOpen={isBulkModalOpen} onClose={() => setIsBulkModalOpen(false)} />
-
       {/* Add Employee Form Drawer */}
-      {isStaff && isAdding && (
-        <div className="grid gap-6 lg:grid-cols-3 animate-in fade-in slide-in-from-top-4 duration-300">
-          <Panel className="lg:col-span-2 bg-white border border-indigo-200 shadow-sm rounded-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-4">
-              <h2 className="text-base font-bold text-slate-900 font-display flex items-center gap-2">
-                <UserPlus className="h-4.5 w-4.5 text-indigo-600" />
+      {isAdding && isStaff && (
+        <Panel className="border border-indigo-200 bg-indigo-50/20 shadow-md rounded-3xl p-6 sm:p-8 space-y-6 animate-in slide-in-from-top-4 duration-200">
+          <div className="flex items-center gap-3 pb-4 border-b border-indigo-100">
+            <div className="h-10 w-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+              <UserPlus className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900 font-display">
                 Register New Employee
               </h2>
-              <span className="text-xs text-slate-500">Creates directory record</span>
+              <p className="text-xs text-slate-500">
+                Create the employee record first, then proceed to the Biometric Enrollment Studio.
+              </p>
             </div>
+          </div>
 
-            <form
-              className="grid gap-4 sm:grid-cols-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                addEmployee.mutate();
-              }}
-            >
-              <Field label="Employee Code" hint="Unique ID badge">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              addEmployee.mutate();
+            }}
+            className="space-y-4"
+          >
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <Field label="Employee Code / ID (Unique)">
                 <Input
+                  required
+                  placeholder="e.g. EMP-0142"
                   value={form.employee_code}
                   onChange={(e) => setForm({ ...form, employee_code: e.target.value })}
-                  placeholder="EMP-0142"
-                  required
                 />
               </Field>
+
               <Field label="Full Name">
                 <Input
+                  required
+                  placeholder="e.g. Marcus Vance"
                   value={form.full_name}
                   onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-                  placeholder="Elena Rostova"
-                  required
                 />
               </Field>
-              <Field label="Work Email">
+
+              <Field label="Email Address (Optional)">
                 <Input
                   type="email"
+                  placeholder="marcus@company.com"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  placeholder="elena@company.com"
                 />
               </Field>
-              <Field label="Job Title">
+
+              <Field label="Job Title / Role">
                 <Input
+                  placeholder="e.g. Senior Software Engineer"
                   value={form.job_title}
                   onChange={(e) => setForm({ ...form, job_title: e.target.value })}
-                  placeholder="Systems Engineer"
                 />
               </Field>
+
               <Field label="Department">
                 <Select
                   value={form.department_id}
                   onChange={(e) => setForm({ ...form, department_id: e.target.value })}
                 >
-                  <option value="">Unassigned</option>
+                  <option value="">No Department Assigned</option>
                   {(departments.data ?? []).map((d) => (
                     <option key={d.id} value={d.id}>
                       {d.name}
@@ -343,169 +338,141 @@ function Employees() {
                   ))}
                 </Select>
               </Field>
-              <div className="flex items-end">
-                <Button type="submit" loading={addEmployee.isPending} className="w-full">
-                  Create Employee Record
-                </Button>
-              </div>
-            </form>
-          </Panel>
-
-          {/* Department Management Panel */}
-          <Panel className="bg-white border border-slate-200 shadow-sm rounded-2xl">
-            <div className="flex items-center gap-2 pb-3 border-b border-slate-200 mb-4">
-              <Building2 className="h-4.5 w-4.5 text-indigo-600" />
-              <h2 className="text-base font-bold text-slate-900 font-display">Departments</h2>
             </div>
-            <div className="flex gap-2">
-              <Input
-                value={newDept}
-                onChange={(e) => setNewDept(e.target.value)}
-                placeholder="e.g. Engineering"
-                className="text-xs"
-              />
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setIsAdding(false)}>
+                Cancel
+              </Button>
               <Button
-                variant="outline"
+                type="submit"
                 size="sm"
-                onClick={() => addDepartment.mutate()}
-                loading={addDepartment.isPending}
+                loading={addEmployee.isPending}
+                icon={<CheckCircle2 className="h-4 w-4" />}
+                className="shadow-sm shadow-indigo-600/20"
               >
-                Add
+                Save & Proceed to Biometrics
               </Button>
             </div>
-
-            <div className="mt-4 flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
-              {(departments.data ?? []).map((d) => (
-                <span
-                  key={d.id}
-                  className="inline-flex items-center rounded-lg bg-slate-100 border border-slate-200 px-2.5 py-1 text-xs text-slate-700 font-medium"
-                >
-                  {d.name}
-                </span>
-              ))}
-              {departments.data?.length === 0 && (
-                <span className="text-xs text-slate-400">No departments registered yet.</span>
-              )}
-            </div>
-          </Panel>
-        </div>
+          </form>
+        </Panel>
       )}
 
-      {/* Directory Table Panel */}
-      <Panel className="p-0 overflow-hidden border border-slate-200 bg-white rounded-2xl shadow-sm">
-        {/* Table Header & Search Filter */}
-        <div className="border-b border-slate-200 px-4 sm:px-6 py-3.5 sm:py-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/70">
-          <div>
-            <h2 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight font-display">
-              Employee Directory
-            </h2>
-            <span className="text-xs text-slate-500 block mt-0.5">
-              Face templates are irreversible mathematical vectors stored in PostgreSQL.
-            </span>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-              <Input
-                placeholder="Search by name, code, role..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 h-9 text-xs w-full"
-              />
-            </div>
-
-            <select
-              value={deptFilter}
-              onChange={(e) => setDeptFilter(e.target.value)}
-              className="h-9 rounded-xl border border-slate-300 bg-white px-3 text-xs text-slate-800 focus:border-indigo-600 focus:outline-none cursor-pointer shrink-0"
-            >
-              <option value="all">All Departments</option>
-              {(departments.data ?? []).map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
-          </div>
+      {/* Search & Department Filter Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Input
+            placeholder="Search by name, ID code, or title..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10 h-10 text-xs sm:text-sm"
+          />
         </div>
 
-        {/* Table Content */}
+        {/* Department filter chips */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+          <button
+            onClick={() => setDeptFilter("all")}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              deptFilter === "all"
+                ? "bg-slate-900 text-white shadow-xs"
+                : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+            }`}
+          >
+            All Teams ({employees.data?.length ?? 0})
+          </button>
+          {(departments.data ?? []).map((d) => {
+            const count = (employees.data ?? []).filter((e) => e.department_id === d.id).length;
+            return (
+              <button
+                key={d.id}
+                onClick={() => setDeptFilter(d.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                  deptFilter === d.id
+                    ? "bg-indigo-600 text-white shadow-xs"
+                    : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                }`}
+              >
+                <span>{d.name}</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                    deptFilter === d.id ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Directory Table */}
+      <Panel className="p-0 overflow-hidden border border-slate-200 bg-white rounded-3xl shadow-sm">
         {employees.isLoading ? (
-          <div className="px-6 py-12 text-center text-sm text-slate-500 flex items-center justify-center gap-2">
+          <div className="p-12 text-center text-sm text-slate-500 flex items-center justify-center gap-2">
             <div className="h-4 w-4 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
             Loading employee directory...
           </div>
-        ) : filteredEmployees.length === 0 ? (
-          <div className="px-6 py-16 text-center">
+        ) : filtered.length === 0 ? (
+          <div className="p-16 text-center">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 border border-slate-200 text-slate-500 mb-3">
-              <Users className="h-6 w-6 text-indigo-600" />
+              <Users className="h-6 w-6 text-slate-400" />
             </div>
             <h3 className="text-base font-semibold text-slate-900">No employees found</h3>
             <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
-              Add your first employee to start biometric face enrollment.
+              {search || deptFilter !== "all"
+                ? "No employee records match your active search filter."
+                : "Get started by adding your first employee to enable biometric facial clock-ins."}
             </p>
-            {isStaff && (
-              <div className="mt-5">
-                <Button
-                  size="sm"
-                  onClick={() => setIsAdding(true)}
-                  icon={<UserPlus className="h-3.5 w-3.5" />}
-                >
-                  Add Employee
-                </Button>
-              </div>
-            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs sm:text-sm min-w-[700px]">
-              <thead className="border-b border-slate-200 bg-slate-100/70 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 font-display">
+            <table className="w-full text-left text-xs sm:text-sm min-w-[720px]">
+              <thead className="border-b border-slate-200 bg-slate-50/70 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 font-display">
                 <tr>
-                  <th className="px-4 sm:px-6 py-3">Code</th>
-                  <th className="px-4 sm:px-6 py-3">Employee</th>
-                  <th className="px-4 sm:px-6 py-3">Department</th>
-                  <th className="px-4 sm:px-6 py-3">Status</th>
-                  <th className="px-4 sm:px-6 py-3">Biometric Profile</th>
-                  <th className="px-4 sm:px-6 py-3 text-right">Actions</th>
+                  <th className="px-6 py-3.5">Employee</th>
+                  <th className="px-6 py-3.5">Employee ID</th>
+                  <th className="px-6 py-3.5">Department</th>
+                  <th className="px-6 py-3.5">Biometric Status</th>
+                  <th className="px-6 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredEmployees.map((e) => {
-                  const hasTemplates = e.templates > 0;
+                {filtered.map((e) => {
+                  const deptName = (e.departments as { name: string } | null)?.name ?? "General";
+                  const isEnrolled = e.templates > 0;
 
                   return (
-                    <tr key={e.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 font-mono text-xs text-indigo-700 font-bold">
-                        {e.employee_code}
-                      </td>
+                    <tr key={e.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <Avatar name={e.full_name} size="sm" />
+                          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 text-white font-bold flex items-center justify-center shadow-xs text-xs">
+                            {e.full_name.charAt(0).toUpperCase()}
+                          </div>
                           <div>
-                            <span className="font-semibold text-slate-900 block text-sm">
+                            <span className="font-bold text-slate-900 block text-sm">
                               {e.full_name}
                             </span>
                             <span className="text-xs text-slate-500">
-                              {e.job_title || "No title set"}
+                              {e.job_title || "Staff Member"}
                             </span>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-xs text-slate-600">
-                        {(e.departments as { name: string } | null)?.name ?? (
-                          <span className="text-slate-400">Unassigned</span>
-                        )}
+                      <td className="px-6 py-4 font-mono text-xs font-bold text-indigo-700">
+                        {e.employee_code}
                       </td>
                       <td className="px-6 py-4">
-                        <Badge tone={e.status === "active" ? "success" : "warning"} size="sm">
-                          {e.status.toUpperCase()}
-                        </Badge>
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                          {deptName}
+                        </span>
                       </td>
                       <td className="px-6 py-4">
-                        {hasTemplates ? (
+                        {isEnrolled ? (
                           <Badge tone="success" pulse size="sm">
-                            ENROLLED ({e.templates} TEMPLATES)
+                            {e.templates} ENROLLED {e.templates === 1 ? "VECTOR" : "VECTORS"}
                           </Badge>
                         ) : (
                           <Badge tone="warning" size="sm">
@@ -514,14 +481,15 @@ function Employees() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex items-center justify-end gap-2">
                           <Link to="/console/enroll/$employeeId" params={{ employeeId: e.id }}>
                             <Button
                               size="xs"
-                              variant={hasTemplates ? "outline" : "primary"}
-                              icon={<ScanFace className="h-3 w-3" />}
+                              variant={isEnrolled ? "outline" : "primary"}
+                              icon={<ScanFace className="h-3.5 w-3.5" />}
+                              className="text-xs"
                             >
-                              {hasTemplates ? "Re-Enrol" : "Enrol Face"}
+                              {isEnrolled ? "Update Face" : "Enrol Face"}
                             </Button>
                           </Link>
 
@@ -529,20 +497,20 @@ function Employees() {
                             <Button
                               size="xs"
                               variant="ghost"
-                              onClick={() => {
+                              onClick={() =>
                                 setEmployeeToDelete({
                                   id: e.id,
                                   full_name: e.full_name,
                                   employee_code: e.employee_code,
                                   job_title: e.job_title,
-                                  department_name: (e.departments as { name: string } | null)?.name,
+                                  department_name: deptName,
                                   templatesCount: e.templates,
-                                });
-                              }}
-                              title="Delete employee profile"
-                              className="text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                                })
+                              }
+                              icon={<Trash2 className="h-3.5 w-3.5 text-rose-600" />}
+                              className="hover:bg-rose-50 text-rose-700"
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <span className="sr-only">Delete</span>
                             </Button>
                           )}
                         </div>
@@ -561,7 +529,7 @@ function Employees() {
         isOpen={Boolean(employeeToDelete)}
         onClose={() => setEmployeeToDelete(null)}
         onConfirm={() => {
-          if (employeeToDelete?.id) {
+          if (employeeToDelete) {
             deleteEmployee.mutate(employeeToDelete.id);
           }
         }}
@@ -569,12 +537,8 @@ function Employees() {
         employee={employeeToDelete}
       />
 
-      {/* Bulk Roster Ingestion Modal */}
-      <BulkEnrollmentModal
-        isOpen={isBulkModalOpen}
-        onClose={() => setIsBulkModalOpen(false)}
-        organizationId={currentOrgId || undefined}
-      />
+      {/* Bulk Roster CSV Ingestion Modal */}
+      <BulkEnrollmentModal isOpen={isBulkModalOpen} onClose={() => setIsBulkModalOpen(false)} />
     </div>
   );
 }
