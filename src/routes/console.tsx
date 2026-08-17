@@ -62,9 +62,9 @@ function ConsoleLayout() {
 
   if (loading || !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-sm text-slate-400 gap-3">
-        <div className="h-5 w-5 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
-        <span className="font-mono text-xs uppercase tracking-widest text-indigo-400 font-semibold">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500 gap-3">
+        <div className="h-5 w-5 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
+        <span className="font-mono text-xs uppercase tracking-widest text-indigo-600 font-semibold">
           Authenticating session…
         </span>
       </div>
@@ -72,9 +72,9 @@ function ConsoleLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-indigo-500/30 selection:text-indigo-200 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-indigo-500/20 selection:text-indigo-900 flex flex-col">
       {/* Top Glass Navigation Header */}
-      <header className="sticky top-0 z-40 bg-slate-950/85 backdrop-blur-xl border-b border-white/10 shadow-lg">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 py-2.5 sm:py-3">
           {/* Left: Brand Logo & Organization Pill */}
           <div className="flex items-center gap-3 sm:gap-4 lg:gap-6">
@@ -84,22 +84,22 @@ function ConsoleLayout() {
 
             {/* Active Company Badge / Switcher */}
             {currentOrg && (
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-900/90 border border-slate-800 rounded-xl text-slate-200 text-xs font-semibold shadow-inner">
-                <Building className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50/90 border border-indigo-200/90 rounded-xl text-indigo-900 text-xs font-semibold shadow-2xs">
+                <Building className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
                 {organizations.length > 1 ? (
                   <select
                     value={currentOrg.id}
                     onChange={(e) => switchOrganization(e.target.value)}
-                    className="bg-transparent font-bold text-slate-200 text-xs focus:outline-none cursor-pointer pr-1"
+                    className="bg-transparent font-bold text-indigo-900 text-xs focus:outline-none cursor-pointer pr-1"
                   >
                     {organizations.map((org) => (
-                      <option key={org.id} value={org.id} className="bg-slate-900 text-white">
+                      <option key={org.id} value={org.id}>
                         {org.name}
                       </option>
                     ))}
                   </select>
                 ) : (
-                  <span className="max-w-[120px] sm:max-w-[160px] truncate font-bold text-slate-200">
+                  <span className="max-w-[120px] sm:max-w-[160px] truncate font-bold text-indigo-900">
                     {currentOrg.name}
                   </span>
                 )}
@@ -107,7 +107,7 @@ function ConsoleLayout() {
             )}
 
             {/* Desktop Navigation Tabs (Hidden on Mobile/Tablet < md) */}
-            <nav className="hidden md:flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800/80">
+            <nav className="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
               {nav.map((item) => {
                 const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
                 return (
@@ -116,8 +116,8 @@ function ConsoleLayout() {
                     to={item.to}
                     className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 ${
                       active
-                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-                        : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+                        ? "bg-white text-slate-900 shadow-xs"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
                     }`}
                   >
                     <item.icon className="h-3.5 w-3.5" />
@@ -130,10 +130,10 @@ function ConsoleLayout() {
 
           {/* Right: Actions & Mobile Hamburger */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Live Terminal status */}
+            {/* Live Terminal status (Hidden on small mobile) */}
             <div className="hidden sm:block">
               <Badge tone="success" pulse size="sm">
-                ENGINE ONLINE
+                ONLINE
               </Badge>
             </div>
 
@@ -149,8 +149,7 @@ function ConsoleLayout() {
               <Button
                 size="sm"
                 variant="outline"
-                icon={<Zap className="h-3.5 w-3.5 text-indigo-400" />}
-                className="border-slate-800 bg-slate-900/80 hover:bg-slate-800 text-slate-200 font-semibold"
+                icon={<Zap className="h-3.5 w-3.5 text-indigo-600" />}
               >
                 Kiosk
               </Button>
@@ -160,7 +159,7 @@ function ConsoleLayout() {
             <button
               onClick={() => signOut()}
               title="Sign out of workspace"
-              className="hidden sm:inline-flex items-center justify-center h-8.5 w-8.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-slate-800 transition-colors cursor-pointer"
+              className="hidden sm:inline-flex items-center justify-center h-8.5 w-8.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
             >
               <LogOut className="h-4 w-4" />
             </button>
@@ -168,7 +167,7 @@ function ConsoleLayout() {
             {/* Mobile Hamburger Toggle Button (< md) */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden flex items-center justify-center h-9 w-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 transition-colors cursor-pointer"
+              className="md:hidden flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 transition-colors"
               aria-label="Toggle mobile menu"
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -178,11 +177,11 @@ function ConsoleLayout() {
 
         {/* Mobile Dropdown Menu (< md) */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-800 bg-slate-950 px-4 pt-3 pb-5 space-y-3 animate-in slide-in-from-top-2 duration-200 shadow-2xl">
+          <div className="md:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-5 space-y-3 animate-in slide-in-from-top-2 duration-200 shadow-xl">
             {/* Status Pill */}
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800 text-xs">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 text-xs">
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-slate-400">System Status:</span>
+                <span className="font-semibold text-slate-700">System Status:</span>
                 <Badge tone="success" pulse size="sm">
                   ENGINE ONLINE
                 </Badge>
@@ -207,12 +206,12 @@ function ConsoleLayout() {
                     onClick={() => setMobileMenuOpen(false)}
                     className={`flex items-center gap-3 w-full rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all ${
                       active
-                        ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30"
-                        : "text-slate-300 hover:bg-slate-900"
+                        ? "bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-xs"
+                        : "text-slate-700 hover:bg-slate-50"
                     }`}
                   >
                     <item.icon
-                      className={`h-4 w-4 ${active ? "text-indigo-400" : "text-slate-500"}`}
+                      className={`h-4 w-4 ${active ? "text-indigo-600" : "text-slate-500"}`}
                     />
                     <span>{item.label}</span>
                   </Link>
@@ -235,7 +234,7 @@ function ConsoleLayout() {
                 variant="outline"
                 size="sm"
                 onClick={() => signOut()}
-                className="w-full justify-center text-rose-400 hover:bg-rose-500/10 border-rose-500/30"
+                className="w-full justify-center text-rose-700 hover:bg-rose-50 border-rose-200"
                 icon={<LogOut className="h-4 w-4" />}
               >
                 Sign Out
@@ -251,20 +250,20 @@ function ConsoleLayout() {
       </main>
 
       {/* Console Workspace Footer */}
-      <footer className="hidden md:block border-t border-slate-800/80 bg-slate-950/60 backdrop-blur-md py-4 px-6 mt-auto">
+      <footer className="hidden md:block border-t border-slate-200 bg-white/60 backdrop-blur-xs py-4 px-6 mt-auto">
         <div className="mx-auto max-w-7xl flex items-center justify-between text-xs text-slate-500">
           <div className="flex items-center gap-3">
-            <span className="font-semibold text-slate-400">FaceTime Attendance</span>
+            <span className="font-semibold text-slate-700">FaceTime Attendance</span>
             <span>·</span>
             <span>Zero-Photo Retention (RAM Vectors Only)</span>
             <span>·</span>
-            <span className="inline-flex items-center gap-1 text-emerald-400 font-medium">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            <span className="inline-flex items-center gap-1 text-emerald-700 font-medium">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               Engine Online
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <Link to="/kiosk" className="text-indigo-400 hover:text-indigo-300 font-semibold">
+            <Link to="/kiosk" className="text-indigo-600 hover:text-indigo-700 font-semibold">
               Launch Kiosk Terminal →
             </Link>
             <span>© {new Date().getFullYear()} Enterprise Suite</span>
@@ -272,8 +271,8 @@ function ConsoleLayout() {
         </div>
       </footer>
 
-      {/* Mobile Sticky Bottom Navigation Bar */}
-      <div className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-slate-950/90 backdrop-blur-xl border-t border-slate-800 shadow-2xl px-2 py-1.5 flex items-center justify-around">
+      {/* Mobile Sticky Bottom Navigation Bar (Visible only on < md screens) */}
+      <div className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-lg px-2 py-1.5 flex items-center justify-around">
         {nav.map((item) => {
           const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
           return (
@@ -281,11 +280,11 @@ function ConsoleLayout() {
               key={item.to}
               to={item.to}
               className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-semibold transition-all ${
-                active ? "text-indigo-400 font-bold" : "text-slate-400 hover:text-slate-200"
+                active ? "text-indigo-600 font-bold" : "text-slate-500 hover:text-slate-900"
               }`}
             >
               <item.icon
-                className={`h-4 w-4 mb-0.5 ${active ? "text-indigo-400" : "text-slate-500"}`}
+                className={`h-4 w-4 mb-0.5 ${active ? "text-indigo-600" : "text-slate-500"}`}
               />
               <span className="truncate max-w-[75px]">{item.label.split(" ")[0]}</span>
             </Link>
@@ -294,10 +293,10 @@ function ConsoleLayout() {
 
         <Link
           to="/kiosk"
-          className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-semibold text-indigo-400 hover:text-indigo-300"
+          className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-semibold text-indigo-600 hover:text-indigo-700"
         >
-          <div className="h-4 w-4 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center mb-0.5">
-            <Zap className="h-3 w-3 text-indigo-400" />
+          <div className="h-4 w-4 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center mb-0.5">
+            <Zap className="h-3 w-3 text-indigo-600" />
           </div>
           <span>Kiosk</span>
         </Link>

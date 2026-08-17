@@ -337,19 +337,19 @@ function Enroll() {
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <h1 className="text-xl sm:text-2xl font-bold text-white font-display">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 font-display">
               Biometric Face Enrollment
             </h1>
           </div>
-          <p className="mt-1 text-xs sm:text-sm text-slate-400">
+          <p className="mt-1 text-xs sm:text-sm text-slate-500">
             {employee.data?.full_name ? (
               <span className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                <span className="font-semibold text-white">{employee.data.full_name}</span>
-                <span className="font-mono text-indigo-400 font-bold">
+                <span className="font-semibold text-slate-900">{employee.data.full_name}</span>
+                <span className="font-mono text-indigo-600 font-bold">
                   ({employee.data.employee_code})
                 </span>
                 {employee.data.job_title && (
-                  <span className="text-slate-400">· {employee.data.job_title}</span>
+                  <span className="text-slate-500">· {employee.data.job_title}</span>
                 )}
               </span>
             ) : (
@@ -375,8 +375,8 @@ function Enroll() {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsDeleteModalOpen(true)}
-                icon={<Trash2 className="h-4 w-4 text-rose-400" />}
-                className="text-rose-400 hover:bg-rose-500/10 border-rose-500/30 shrink-0"
+                icon={<Trash2 className="h-4 w-4 text-rose-600" />}
+                className="text-rose-700 hover:bg-rose-50 border-rose-200 shrink-0"
               >
                 Delete Profile
               </Button>
@@ -386,13 +386,13 @@ function Enroll() {
       </div>
 
       {/* Mode Selector Tabs */}
-      <div className="flex items-center gap-1.5 sm:gap-2 border-b border-slate-800 pb-3 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0 whitespace-nowrap">
+      <div className="flex items-center gap-1.5 sm:gap-2 border-b border-slate-200 pb-3 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0 whitespace-nowrap">
         <button
           onClick={() => handleTabChange("snapshot")}
           className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shrink-0 ${
             tab === "snapshot"
-              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-              : "bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800"
+              ? "bg-indigo-600 text-white shadow-sm"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
           }`}
         >
           <Camera className="h-4 w-4" />
@@ -406,8 +406,8 @@ function Enroll() {
           onClick={() => handleTabChange("upload")}
           className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shrink-0 ${
             tab === "upload"
-              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-              : "bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800"
+              ? "bg-indigo-600 text-white shadow-sm"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
           }`}
         >
           <UploadCloud className="h-4 w-4" />
@@ -421,8 +421,8 @@ function Enroll() {
           onClick={() => handleTabChange("guided")}
           className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shrink-0 ${
             tab === "guided"
-              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-              : "bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800"
+              ? "bg-indigo-600 text-white shadow-sm"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
           }`}
         >
           <Sparkles className="h-4 w-4" />
@@ -528,7 +528,7 @@ function Enroll() {
 
           {/* MODE 2: UPLOAD PICTURE FILE */}
           {tab === "upload" && (
-            <Panel className="bg-slate-900/80 border border-slate-800 rounded-3xl shadow-xl p-6">
+            <Panel className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -552,29 +552,29 @@ function Enroll() {
                   const file = e.dataTransfer.files?.[0];
                   if (file) void handleFileUpload(file);
                 }}
-                className="border-2 border-dashed border-slate-700 hover:border-indigo-500 hover:bg-indigo-500/10 transition-all rounded-2xl p-8 sm:p-12 text-center cursor-pointer flex flex-col items-center justify-center gap-4"
+                className="border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 transition-all rounded-2xl p-8 sm:p-12 text-center cursor-pointer flex flex-col items-center justify-center gap-4"
               >
-                <div className="h-16 w-16 rounded-3xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-md">
+                <div className="h-16 w-16 rounded-3xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shadow-sm">
                   <UploadCloud className="h-8 w-8" />
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-bold text-white font-display">
+                  <h3 className="text-lg font-bold text-slate-900 font-display">
                     Upload Employee Portrait Photo
                   </h3>
-                  <p className="text-xs text-slate-400 mt-1 max-w-sm">
+                  <p className="text-xs text-slate-500 mt-1 max-w-sm">
                     Drag and drop a JPG, PNG, or WebP photo here, or click to browse from your
                     device.
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 text-xs font-medium text-indigo-300 bg-indigo-500/20 px-4 py-1.5 rounded-full border border-indigo-500/30">
-                  <FileImage className="h-3.5 w-3.5 text-indigo-400" />
+                <div className="flex items-center gap-2 text-xs font-medium text-indigo-700 bg-indigo-50 px-4 py-1.5 rounded-full border border-indigo-200">
+                  <FileImage className="h-3.5 w-3.5" />
                   Supports Passport Photos, ID Badges, Headshots
                 </div>
 
                 {uploadProcessing && (
-                  <div className="flex items-center gap-2 text-xs text-amber-400 font-medium">
+                  <div className="flex items-center gap-2 text-xs text-amber-700 font-medium">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Neural model analyzing image in local memory…
                   </div>
@@ -583,9 +583,9 @@ function Enroll() {
 
               {/* Uploaded Image Confirmation Preview Card */}
               {uploadPreview && uploadedVector && (
-                <div className="mt-6 p-4 rounded-2xl bg-slate-950/80 border border-slate-800 flex flex-wrap items-center justify-between gap-4">
+                <div className="mt-6 p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
-                    <div className="relative h-16 w-16 rounded-xl overflow-hidden border border-indigo-500/40 shadow-sm">
+                    <div className="relative h-16 w-16 rounded-xl overflow-hidden border border-indigo-300 shadow-sm">
                       <img
                         src={uploadPreview}
                         alt="Face Preview"
@@ -594,10 +594,10 @@ function Enroll() {
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                        <span className="font-semibold text-white text-sm">Face Extracted</span>
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                        <span className="font-semibold text-slate-900 text-sm">Face Extracted</span>
                       </div>
-                      <p className="text-xs text-slate-400 mt-0.5">
+                      <p className="text-xs text-slate-500 mt-0.5">
                         Confidence: {Math.round((uploadSample?.score ?? 0.95) * 100)}% · Ready to
                         Save
                       </p>
@@ -613,7 +613,6 @@ function Enroll() {
                       setUploadedVector(null);
                     }}
                     icon={<RefreshCw className="h-3.5 w-3.5" />}
-                    className="border-slate-800 bg-slate-900 text-slate-300"
                   >
                     Choose Different Photo
                   </Button>
@@ -624,7 +623,7 @@ function Enroll() {
 
           {/* MODE 3: GUIDED 5-ANGLE SCAN */}
           {tab === "guided" && (
-            <Panel className="p-0 overflow-hidden border border-slate-800 bg-slate-950 relative rounded-3xl shadow-xl">
+            <Panel className="p-0 overflow-hidden border border-slate-200 bg-slate-950 relative rounded-2xl shadow-md">
               <div className="relative aspect-video bg-slate-950 flex items-center justify-center">
                 <video
                   ref={videoRef}
@@ -690,13 +689,13 @@ function Enroll() {
           )}
 
           {/* PRIVACY GUARANTEE NOTICE */}
-          <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 flex items-start gap-3 text-xs text-slate-300 backdrop-blur-md">
-            <ShieldCheck className="h-5 w-5 text-indigo-400 shrink-0 mt-0.5" />
+          <div className="p-4 rounded-xl bg-indigo-50/60 border border-indigo-100 flex items-start gap-3 text-xs text-slate-700">
+            <ShieldCheck className="h-5 w-5 text-indigo-600 shrink-0 mt-0.5" />
             <div>
-              <span className="font-semibold text-white block">
+              <span className="font-semibold text-slate-900 block">
                 Zero-Knowledge Facial Privacy
               </span>
-              <p className="mt-0.5 text-slate-400 leading-relaxed">
+              <p className="mt-0.5 text-slate-600 leading-relaxed">
                 Raw photos and video frames are never uploaded or stored on any server. Only an
                 encrypted mathematical biometric profile is registered.
               </p>
@@ -706,54 +705,54 @@ function Enroll() {
 
         {/* RIGHT 1 COL: Biometric Confirmation & Save Panel */}
         <div className="space-y-4">
-          <Panel className="bg-slate-900/80 border border-slate-800 rounded-3xl shadow-xl backdrop-blur-xl p-6">
-            <h2 className="text-base font-bold text-white font-display flex items-center gap-2">
-              <ScanFace className="h-4.5 w-4.5 text-indigo-400" />
+          <Panel className="bg-white border border-slate-200 rounded-2xl shadow-sm">
+            <h2 className="text-base font-bold text-slate-900 font-display flex items-center gap-2">
+              <ScanFace className="h-4.5 w-4.5 text-indigo-600" />
               Biometric Enrollment Status
             </h2>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-slate-500 mt-1">
               Verify the profile before saving to the employee directory.
             </p>
 
             {/* Ready State */}
             {((tab === "snapshot" && capturedVector) || (tab === "upload" && uploadedVector)) && (
               <div className="mt-4 space-y-4 animate-in fade-in zoom-in-95 duration-200">
-                <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 space-y-3">
+                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-3">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                    <div className="h-10 w-10 rounded-xl bg-emerald-100 border border-emerald-300 flex items-center justify-center text-emerald-700">
                       <UserCheck className="h-5 w-5" />
                     </div>
                     <div>
-                      <span className="font-bold text-white text-sm block">
+                      <span className="font-bold text-slate-900 text-sm block">
                         Biometric Profile Ready
                       </span>
-                      <span className="text-[11px] text-emerald-400 font-medium">
+                      <span className="text-[11px] text-emerald-700 font-medium">
                         Quality Validated · Template Normalized
                       </span>
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-emerald-500/20 text-xs text-slate-300 space-y-1.5">
+                  <div className="pt-2 border-t border-emerald-200 text-xs text-slate-700 space-y-1.5">
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Employee:</span>
-                      <span className="font-semibold text-white">
+                      <span className="text-slate-500">Employee:</span>
+                      <span className="font-semibold text-slate-900">
                         {employee.data?.full_name || "Employee"}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Privacy Protection:</span>
-                      <span className="text-indigo-400 font-medium">Zero-Photo Encrypted</span>
+                      <span className="text-slate-500">Privacy Protection:</span>
+                      <span className="text-indigo-700 font-medium">Zero-Photo Encrypted</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Status:</span>
-                      <span className="text-emerald-400 font-semibold">Ready to Activate</span>
+                      <span className="text-slate-500">Status:</span>
+                      <span className="text-emerald-700 font-semibold">Ready to Activate</span>
                     </div>
                   </div>
                 </div>
 
                 <Button
                   size="lg"
-                  className="w-full shadow-lg shadow-indigo-600/30 font-bold"
+                  className="w-full"
                   loading={saving}
                   onClick={() => {
                     const vec = tab === "snapshot" ? capturedVector : uploadedVector;
@@ -768,12 +767,12 @@ function Enroll() {
 
             {/* Empty State when no vector captured yet */}
             {!capturedVector && !uploadedVector && tab !== "guided" && (
-              <div className="mt-6 text-center py-8 border border-slate-800 rounded-2xl bg-slate-950/60">
-                <div className="h-10 w-10 rounded-xl bg-slate-900 border border-slate-800 mx-auto flex items-center justify-center text-slate-500 mb-2 shadow-inner">
-                  <ScanFace className="h-5 w-5 text-indigo-400" />
+              <div className="mt-6 text-center py-8 border border-slate-200 rounded-xl bg-slate-50">
+                <div className="h-10 w-10 rounded-xl bg-white border border-slate-200 mx-auto flex items-center justify-center text-slate-400 mb-2 shadow-xs">
+                  <ScanFace className="h-5 w-5 text-indigo-600" />
                 </div>
-                <p className="text-xs font-semibold text-white">Awaiting Face Capture</p>
-                <p className="text-[11px] text-slate-400 max-w-xs mx-auto mt-1">
+                <p className="text-xs font-semibold text-slate-800">Awaiting Face Capture</p>
+                <p className="text-[11px] text-slate-500 max-w-xs mx-auto mt-1">
                   {tab === "snapshot"
                     ? "Start the camera and click 'Capture Face' to generate the profile."
                     : "Upload an employee portrait to generate the profile."}
@@ -792,27 +791,27 @@ function Enroll() {
                     return (
                       <li
                         key={a.key}
-                        className="flex items-center justify-between text-xs p-2.5 rounded-xl bg-slate-950/80 border border-slate-800"
+                        className="flex items-center justify-between text-xs p-2 rounded-lg bg-slate-50 border border-slate-200"
                       >
                         <div className="flex items-center gap-2">
                           <span
                             className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${
                               complete
-                                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold"
+                                ? "bg-emerald-100 text-emerald-700 font-bold"
                                 : current
                                   ? "bg-indigo-600 text-white font-bold"
-                                  : "bg-slate-800 text-slate-400"
+                                  : "bg-slate-200 text-slate-600"
                             }`}
                           >
                             {complete ? <Check className="h-3 w-3" /> : n}
                           </span>
                           <span
-                            className={complete ? "text-slate-500 line-through" : "text-slate-200"}
+                            className={complete ? "text-slate-400 line-through" : "text-slate-800"}
                           >
                             {a.label}
                           </span>
                         </div>
-                        <span className="text-[10px] text-slate-400 font-mono">
+                        <span className="text-[10px] text-slate-500 font-mono">
                           {Math.min(n, a.target)}/{a.target}
                         </span>
                       </li>
@@ -823,7 +822,7 @@ function Enroll() {
                 {sessionRef.current.canFinish && (
                   <Button
                     size="md"
-                    className="w-full mt-3 font-bold shadow-lg shadow-indigo-600/30"
+                    className="w-full mt-3"
                     loading={saving}
                     onClick={() => void saveGuidedTemplates()}
                   >
@@ -835,12 +834,12 @@ function Enroll() {
           </Panel>
 
           {/* Quick Tips */}
-          <Panel className="p-4 border border-slate-800 bg-slate-900/60 text-xs space-y-2 rounded-2xl backdrop-blur-xl">
-            <div className="flex items-center gap-1.5 text-slate-200 font-semibold">
-              <Info className="h-4 w-4 text-indigo-400" />
+          <Panel className="p-4 border border-slate-200 bg-slate-50 text-xs space-y-2 rounded-2xl">
+            <div className="flex items-center gap-1.5 text-slate-800 font-semibold">
+              <Info className="h-4 w-4 text-indigo-600" />
               <span>Tips for Fast Scanning</span>
             </div>
-            <ul className="list-disc pl-4 space-y-1 text-[11px] text-slate-400 leading-relaxed">
+            <ul className="list-disc pl-4 space-y-1 text-[11px] text-slate-600 leading-relaxed">
               <li>Ensure good lighting facing the front of the face.</li>
               <li>Maintain a natural expression looking straight ahead.</li>
             </ul>
