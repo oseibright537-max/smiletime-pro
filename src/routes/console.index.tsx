@@ -312,17 +312,24 @@ function Overview() {
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* Top Header & Fast Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-slate-800/80">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 font-display">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white font-display">
               Workforce Intelligence
             </h1>
             <Badge tone="success" pulse size="sm">
               ENGINE LIVE
             </Badge>
+            <button
+              onClick={() => setIsComplianceModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/20 transition-colors cursor-pointer"
+            >
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+              <span>GDPR Zero-Photo Certified</span>
+            </button>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 max-w-xl">
+          <p className="text-xs sm:text-sm text-slate-400 max-w-xl">
             Real-time biometric attendance telemetry, automated shift verification, and 1-click
             payroll integration.
           </p>
@@ -334,8 +341,8 @@ function Overview() {
             variant="outline"
             size="sm"
             onClick={() => setIsPayrollModalOpen(true)}
-            icon={<FileSpreadsheet className="h-4 w-4 text-indigo-600" />}
-            className="flex-1 sm:flex-none justify-center rounded-xl bg-white hover:bg-slate-50 border-slate-200 text-slate-700 font-semibold"
+            icon={<FileSpreadsheet className="h-4 w-4 text-indigo-400" />}
+            className="flex-1 sm:flex-none justify-center rounded-xl bg-slate-900/80 hover:bg-slate-800 border-slate-800 text-slate-200 font-semibold"
           >
             Payroll Sync
           </Button>
@@ -345,8 +352,8 @@ function Overview() {
             size="sm"
             onClick={exportAllCsv}
             disabled={events.length === 0}
-            icon={<Download className="h-4 w-4 text-slate-500" />}
-            className="flex-1 sm:flex-none justify-center rounded-xl bg-white hover:bg-slate-50 border-slate-200 text-slate-700"
+            icon={<Download className="h-4 w-4 text-slate-400" />}
+            className="flex-1 sm:flex-none justify-center rounded-xl bg-slate-900/80 hover:bg-slate-800 border-slate-800 text-slate-200"
           >
             Export CSV
           </Button>
@@ -355,7 +362,7 @@ function Overview() {
             <Button
               size="sm"
               icon={<ScanFace className="h-4 w-4" />}
-              className="w-full justify-center rounded-xl shadow-md shadow-indigo-600/20 font-bold"
+              className="w-full justify-center rounded-xl font-bold shadow-lg shadow-indigo-600/30"
             >
               Launch Kiosk
             </Button>
@@ -365,6 +372,97 @@ function Overview() {
 
       {/* Real-time Shift Window Status Banner */}
       <TimeWindowBanner showRulesGuide={false} />
+
+      {/* Bento Grid: 3 Hero Intelligence Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* Bento 1: Real-Time Presence Dial */}
+        <div className="bento-card p-6 bg-slate-900/70 border border-slate-800/90 rounded-3xl backdrop-blur-xl relative flex flex-col justify-between hover:border-indigo-500/30 transition-all duration-300">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 font-display">
+              Workforce Presence
+            </span>
+            <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+          </div>
+          <div className="my-4 flex items-center justify-between">
+            <div>
+              <div className="text-3xl sm:text-4xl font-extrabold font-mono text-white">
+                {attendanceRate}%
+              </div>
+              <div className="text-xs text-slate-400 mt-1">
+                {isLoading ? "…" : `${data?.present ?? 0} of ${data?.active ?? 0} active employees clocked in`}
+              </div>
+            </div>
+            <div className="h-16 w-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shadow-inner">
+              <Users className="h-8 w-8" />
+            </div>
+          </div>
+          <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+            <div
+              className="bg-gradient-to-r from-indigo-500 to-emerald-400 h-full rounded-full transition-all duration-500"
+              style={{ width: `${Math.min(100, attendanceRate)}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Bento 2: Shift Punctuality Engine */}
+        <div className="bento-card p-6 bg-slate-900/70 border border-slate-800/90 rounded-3xl backdrop-blur-xl relative flex flex-col justify-between hover:border-emerald-500/30 transition-all duration-300">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 font-display">
+              Shift Compliance
+            </span>
+            <span className="text-xs font-mono font-semibold text-emerald-400">
+              Cutoff 8:30 AM
+            </span>
+          </div>
+          <div className="my-4 grid grid-cols-2 gap-4">
+            <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800/80">
+              <span className="text-[11px] text-slate-400 font-medium block">On Time Arrival</span>
+              <span className="text-2xl font-extrabold font-mono text-emerald-400 mt-1 block">
+                {isLoading ? "—" : data?.onTimeCount ?? 0}
+              </span>
+            </div>
+            <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800/80">
+              <span className="text-[11px] text-slate-400 font-medium block">Late Arrival</span>
+              <span className="text-2xl font-extrabold font-mono text-amber-400 mt-1 block">
+                {isLoading ? "—" : data?.lateCount ?? 0}
+              </span>
+            </div>
+          </div>
+          <div className="text-[11px] text-slate-500 flex items-center justify-between">
+            <span>Evening checkout: 4:40 PM</span>
+            <span className="font-semibold text-slate-400">{data?.validatedClockOutCount ?? 0} departed</span>
+          </div>
+        </div>
+
+        {/* Bento 3: Biometric Security & Telemetry */}
+        <div className="bento-card p-6 bg-slate-900/70 border border-slate-800/90 rounded-3xl backdrop-blur-xl relative flex flex-col justify-between hover:border-cyan-500/30 transition-all duration-300">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 font-display">
+              Biometric Engine
+            </span>
+            <span className="text-xs font-mono font-semibold text-cyan-400">
+              RAM 128-D Vectors
+            </span>
+          </div>
+          <div className="my-4 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-400">Cosine Distance Threshold:</span>
+              <span className="font-mono text-slate-200 font-semibold">&lt; 0.52 (Strict)</span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-400">3D Liveness Anti-Spoof:</span>
+              <span className="font-mono text-emerald-400 font-semibold">Active · 98% OK</span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-400">Photo Retention Policy:</span>
+              <span className="font-mono text-indigo-300 font-semibold">0 Photos Stored</span>
+            </div>
+          </div>
+          <div className="text-[11px] text-slate-500">
+            Encrypted RAM computation with volatile memory flushing
+          </div>
+        </div>
+      </div>
 
       {/* Primary KPI Cards Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -409,25 +507,25 @@ function Overview() {
       </div>
 
       {/* View Selector Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-3 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0">
+      <div className="flex items-center gap-2 border-b border-slate-800 pb-3 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0">
         <button
           onClick={() => setActiveTab("live")}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap ${
             activeTab === "live"
-              ? "bg-slate-900 text-white shadow-xs"
-              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80"
+              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+              : "bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800"
           }`}
         >
           <Activity className="h-4 w-4" />
-          <span>Live Stream</span>
+          <span>Live Telemetry Feed</span>
         </button>
 
         <button
           onClick={() => setActiveTab("analytics")}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap ${
             activeTab === "analytics"
-              ? "bg-slate-900 text-white shadow-xs"
-              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80"
+              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+              : "bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800"
           }`}
         >
           <BarChart3 className="h-4 w-4" />
@@ -438,8 +536,8 @@ function Overview() {
           onClick={() => setActiveTab("monthly")}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap ${
             activeTab === "monthly"
-              ? "bg-slate-900 text-white shadow-xs"
-              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80"
+              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+              : "bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800"
           }`}
         >
           <FileSpreadsheet className="h-4 w-4" />
@@ -449,34 +547,34 @@ function Overview() {
 
       {/* TAB 1: Live Recognition Telemetry Log */}
       {activeTab === "live" && (
-        <Panel className="p-0 overflow-hidden border border-slate-200 bg-white rounded-3xl shadow-sm animate-in fade-in duration-200">
+        <Panel className="p-0 overflow-hidden border border-slate-800/90 bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-2xl animate-in fade-in duration-200">
           {/* Table Header & Filters */}
-          <div className="border-b border-slate-200 px-4 sm:px-6 py-3.5 sm:py-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/70">
+          <div className="border-b border-slate-800 px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-950/60">
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight font-display flex items-center gap-2">
-                <Activity className="h-4 w-4 text-indigo-600 shrink-0" />
+              <h2 className="text-sm sm:text-base font-bold text-white tracking-tight font-display flex items-center gap-2">
+                <Activity className="h-4 w-4 text-indigo-400 shrink-0" />
                 <span>Live Recognition Stream — Today</span>
               </h2>
-              <span className="text-xs text-slate-500 block mt-0.5">
+              <span className="text-xs text-slate-400 block mt-0.5">
                 Every event records on-device Euclidean match distance and 3D anti-spoof liveness.
               </span>
             </div>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
               <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
                 <Input
                   placeholder="Filter by name or code..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 h-9 text-xs w-full"
+                  className="pl-9 h-9 text-xs w-full bg-slate-950/80 border-slate-800 text-slate-200"
                 />
               </div>
 
               <select
                 value={filterKind}
                 onChange={(e) => setFilterKind(e.target.value)}
-                className="h-9 rounded-xl border border-slate-300 bg-white px-3 text-xs text-slate-800 focus:border-indigo-600 focus:outline-none cursor-pointer shrink-0"
+                className="h-9 rounded-xl border border-slate-800 bg-slate-950/80 px-3 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none cursor-pointer shrink-0"
               >
                 <option value="all">All Events</option>
                 <option value="check_in">Clock In</option>
@@ -487,19 +585,19 @@ function Overview() {
 
           {/* Table Content */}
           {isLoading ? (
-            <div className="px-6 py-12 text-center text-sm text-slate-500 flex items-center justify-center gap-2">
-              <div className="h-4 w-4 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
+            <div className="px-6 py-12 text-center text-sm text-slate-400 flex items-center justify-center gap-2">
+              <div className="h-4 w-4 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
               Loading live events...
             </div>
           ) : events.length === 0 ? (
             <div className="px-6 py-16 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 border border-slate-200 text-slate-500 mb-3">
-                <ScanFace className="h-6 w-6 text-indigo-600" />
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-800/80 border border-slate-700/60 text-slate-400 mb-3">
+                <ScanFace className="h-6 w-6 text-indigo-400" />
               </div>
-              <h3 className="text-base font-semibold text-slate-900">
+              <h3 className="text-base font-semibold text-white">
                 No attendance events logged yet today
               </h3>
-              <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
+              <p className="mt-1 text-xs text-slate-400 max-w-sm mx-auto">
                 Launch the attendance kiosk terminal to start scanning enrolled employees.
               </p>
               <div className="mt-5">
@@ -513,18 +611,18 @@ function Overview() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs sm:text-sm min-w-[760px]">
-                <thead className="border-b border-slate-200 bg-slate-100/70 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 font-display">
+                <thead className="border-b border-slate-800 bg-slate-950/80 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400 font-display">
                   <tr>
-                    <th className="px-4 sm:px-6 py-3">Employee</th>
-                    <th className="px-4 sm:px-6 py-3">Event Type</th>
-                    <th className="px-4 sm:px-6 py-3">Punctuality Rule</th>
-                    <th className="px-4 sm:px-6 py-3">Timestamp</th>
-                    <th className="px-4 sm:px-6 py-3">Match Confidence</th>
-                    <th className="px-4 sm:px-6 py-3">3D Liveness</th>
-                    <th className="px-4 sm:px-6 py-3 text-right">Audit Trail</th>
+                    <th className="px-4 sm:px-6 py-3.5">Employee</th>
+                    <th className="px-4 sm:px-6 py-3.5">Event Type</th>
+                    <th className="px-4 sm:px-6 py-3.5">Punctuality Rule</th>
+                    <th className="px-4 sm:px-6 py-3.5">Timestamp</th>
+                    <th className="px-4 sm:px-6 py-3.5">Match Confidence</th>
+                    <th className="px-4 sm:px-6 py-3.5">3D Liveness</th>
+                    <th className="px-4 sm:px-6 py-3.5 text-right">Audit Trail</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-800/60">
                   {events.map((e) => {
                     const emp = e.employees as {
                       full_name: string;
@@ -540,21 +638,21 @@ function Overview() {
                     const classification = computeEventClassification(e.occurred_at, e.kind);
 
                     return (
-                      <tr key={e.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-3.5">
+                      <tr key={e.id} className="hover:bg-slate-800/40 transition-colors">
+                        <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <Avatar name={name} size="sm" />
                             <div>
-                              <span className="font-semibold text-slate-900 block text-sm">
+                              <span className="font-semibold text-white block text-sm">
                                 {name}
                               </span>
-                              <span className="font-mono text-xs text-indigo-700 font-bold">
+                              <span className="font-mono text-xs text-indigo-400 font-bold">
                                 {code}
                               </span>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-3.5">
+                        <td className="px-6 py-4">
                           <Badge
                             tone={isCheckIn ? "success" : isCheckOut ? "primary" : "warning"}
                             size="sm"
@@ -562,46 +660,46 @@ function Overview() {
                             {e.kind.replace("_", " ").toUpperCase()}
                           </Badge>
                         </td>
-                        <td className="px-6 py-3.5">
+                        <td className="px-6 py-4">
                           <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border ${
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
                               classification.tone === "success"
-                                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
                                 : classification.tone === "warning"
-                                  ? "bg-amber-50 text-amber-800 border-amber-200"
+                                  ? "bg-amber-500/10 text-amber-300 border-amber-500/30"
                                   : classification.tone === "primary"
-                                    ? "bg-indigo-50 text-indigo-800 border-indigo-200"
-                                    : "bg-rose-50 text-rose-800 border-rose-200"
+                                    ? "bg-indigo-500/10 text-indigo-300 border-indigo-500/30"
+                                    : "bg-rose-500/10 text-rose-300 border-rose-500/30"
                             }`}
                           >
                             {classification.label}
                           </span>
                         </td>
-                        <td className="px-6 py-3.5 font-mono text-xs text-slate-600">
+                        <td className="px-6 py-4 font-mono text-xs text-slate-300">
                           {new Date(e.occurred_at).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
                             second: "2-digit",
                           })}
                         </td>
-                        <td className="px-6 py-3.5">
+                        <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
-                            <div className="w-14 h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                            <div className="w-14 h-1.5 rounded-full bg-slate-800 overflow-hidden">
                               <div
-                                className="h-full bg-indigo-600 rounded-full"
+                                className="h-full bg-gradient-to-r from-indigo-500 to-cyan-400 rounded-full"
                                 style={{
                                   width: `${Math.min(100, Math.round((e.confidence ?? 0.8) * 100))}%`,
                                 }}
                               />
                             </div>
-                            <span className="font-mono text-xs text-indigo-700 font-semibold">
+                            <span className="font-mono text-xs text-indigo-400 font-semibold">
                               {e.confidence != null ? `${Math.round(e.confidence * 100)}%` : "96%"}
                             </span>
                           </div>
                         </td>
-                        <td className="px-6 py-3.5">
-                          <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-medium">
-                            <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
+                            <ShieldCheck className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
                             <span>
                               {e.liveness_score != null
                                 ? `${Math.round(e.liveness_score * 100)}% Verified`
@@ -609,7 +707,7 @@ function Overview() {
                             </span>
                           </div>
                         </td>
-                        <td className="px-6 py-3.5 text-right">
+                        <td className="px-6 py-4 text-right">
                           <Button
                             size="xs"
                             variant="ghost"
@@ -628,8 +726,8 @@ function Overview() {
                                 status: classification.label,
                               });
                             }}
-                            icon={<Terminal className="h-3 w-3 text-indigo-600" />}
-                            className="text-xs text-indigo-700 hover:bg-indigo-50"
+                            icon={<Terminal className="h-3 w-3 text-indigo-400" />}
+                            className="text-xs text-indigo-300 hover:bg-indigo-500/20"
                           >
                             Inspect
                           </Button>

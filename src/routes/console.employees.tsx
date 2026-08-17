@@ -215,17 +215,17 @@ function Employees() {
   return (
     <div className="space-y-6 sm:space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b border-slate-800/80">
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 font-display">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white font-display">
               Workforce Directory
             </h1>
             <Badge tone="primary" size="md">
               {employees.data?.length ?? 0} ACTIVE PROFILES
             </Badge>
           </div>
-          <p className="mt-1 text-xs sm:text-sm text-slate-500">
+          <p className="mt-1 text-xs sm:text-sm text-slate-400">
             Manage employee identities, biometric enrollment suites, and team departments.
           </p>
         </div>
@@ -237,8 +237,8 @@ function Employees() {
               size="sm"
               onClick={exportRosterCsv}
               disabled={!employees.data || employees.data.length === 0}
-              icon={<Download className="h-4 w-4 text-slate-600" />}
-              className="flex-1 sm:flex-none justify-center"
+              icon={<Download className="h-4 w-4 text-slate-400" />}
+              className="flex-1 sm:flex-none justify-center bg-slate-900/80 hover:bg-slate-800 border-slate-800 text-slate-200"
             >
               Export Roster
             </Button>
@@ -247,8 +247,8 @@ function Employees() {
               variant="outline"
               size="sm"
               onClick={() => setIsBulkModalOpen(true)}
-              icon={<UploadCloud className="h-4 w-4 text-indigo-600" />}
-              className="flex-1 sm:flex-none justify-center bg-indigo-50/50 hover:bg-indigo-100 border-indigo-200 text-indigo-950 font-bold"
+              icon={<UploadCloud className="h-4 w-4 text-indigo-400" />}
+              className="flex-1 sm:flex-none justify-center bg-indigo-500/10 hover:bg-indigo-500/20 border-indigo-500/30 text-indigo-300 font-bold"
             >
               Bulk Import CSV
             </Button>
@@ -257,7 +257,7 @@ function Employees() {
               size="sm"
               onClick={() => setIsAdding(!isAdding)}
               icon={<UserPlus className="h-4 w-4" />}
-              className="w-full sm:w-auto justify-center shadow-sm shadow-indigo-600/20"
+              className="w-full sm:w-auto justify-center shadow-lg shadow-indigo-600/30 font-bold"
             >
               {isAdding ? "Cancel Registration" : "Add Employee"}
             </Button>
@@ -267,16 +267,16 @@ function Employees() {
 
       {/* Add Employee Form Drawer */}
       {isAdding && isStaff && (
-        <Panel className="border border-indigo-200 bg-indigo-50/20 shadow-md rounded-3xl p-6 sm:p-8 space-y-6 animate-in slide-in-from-top-4 duration-200">
-          <div className="flex items-center gap-3 pb-4 border-b border-indigo-100">
-            <div className="h-10 w-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+        <Panel className="border border-indigo-500/30 bg-slate-900/90 shadow-2xl rounded-3xl p-6 sm:p-8 space-y-6 animate-in slide-in-from-top-4 duration-200">
+          <div className="flex items-center gap-3 pb-4 border-b border-slate-800">
+            <div className="h-10 w-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-600/30">
               <UserPlus className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900 font-display">
+              <h2 className="text-base font-bold text-white font-display">
                 Register New Employee
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-400">
                 Create the employee record first, then proceed to the Biometric Enrollment Studio.
               </p>
             </div>
@@ -330,9 +330,9 @@ function Employees() {
                   value={form.department_id}
                   onChange={(e) => setForm({ ...form, department_id: e.target.value })}
                 >
-                  <option value="">No Department Assigned</option>
+                  <option value="" className="bg-slate-900 text-slate-300">No Department Assigned</option>
                   {(departments.data ?? []).map((d) => (
-                    <option key={d.id} value={d.id}>
+                    <option key={d.id} value={d.id} className="bg-slate-900 text-slate-100">
                       {d.name}
                     </option>
                   ))}
@@ -349,7 +349,7 @@ function Employees() {
                 size="sm"
                 loading={addEmployee.isPending}
                 icon={<CheckCircle2 className="h-4 w-4" />}
-                className="shadow-sm shadow-indigo-600/20"
+                className="shadow-lg shadow-indigo-600/30"
               >
                 Save & Proceed to Biometrics
               </Button>
@@ -361,12 +361,12 @@ function Employees() {
       {/* Search & Department Filter Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <Input
             placeholder="Search by name, ID code, or title..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 h-10 text-xs sm:text-sm"
+            className="pl-10 h-10 text-xs sm:text-sm bg-slate-900/80 border-slate-800 text-slate-200"
           />
         </div>
 
@@ -376,8 +376,8 @@ function Employees() {
             onClick={() => setDeptFilter("all")}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
               deptFilter === "all"
-                ? "bg-slate-900 text-white shadow-xs"
-                : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                : "bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800"
             }`}
           >
             All Teams ({employees.data?.length ?? 0})
@@ -390,14 +390,14 @@ function Employees() {
                 onClick={() => setDeptFilter(d.id)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
                   deptFilter === d.id
-                    ? "bg-indigo-600 text-white shadow-xs"
-                    : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                    : "bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800"
                 }`}
               >
                 <span>{d.name}</span>
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                    deptFilter === d.id ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
+                    deptFilter === d.id ? "bg-white/20 text-white" : "bg-slate-800 text-slate-400"
                   }`}
                 >
                   {count}
@@ -409,19 +409,19 @@ function Employees() {
       </div>
 
       {/* Directory Table */}
-      <Panel className="p-0 overflow-hidden border border-slate-200 bg-white rounded-3xl shadow-sm">
+      <Panel className="p-0 overflow-hidden border border-slate-800/90 bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-2xl">
         {employees.isLoading ? (
-          <div className="p-12 text-center text-sm text-slate-500 flex items-center justify-center gap-2">
-            <div className="h-4 w-4 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
+          <div className="p-12 text-center text-sm text-slate-400 flex items-center justify-center gap-2">
+            <div className="h-4 w-4 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
             Loading employee directory...
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-16 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 border border-slate-200 text-slate-500 mb-3">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-800/80 border border-slate-700/60 text-slate-400 mb-3">
               <Users className="h-6 w-6 text-slate-400" />
             </div>
-            <h3 className="text-base font-semibold text-slate-900">No employees found</h3>
-            <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
+            <h3 className="text-base font-semibold text-white">No employees found</h3>
+            <p className="mt-1 text-xs text-slate-400 max-w-sm mx-auto">
               {search || deptFilter !== "all"
                 ? "No employee records match your active search filter."
                 : "Get started by adding your first employee to enable biometric facial clock-ins."}
@@ -430,7 +430,7 @@ function Employees() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs sm:text-sm min-w-[720px]">
-              <thead className="border-b border-slate-200 bg-slate-50/70 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 font-display">
+              <thead className="border-b border-slate-800 bg-slate-950/80 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400 font-display">
                 <tr>
                   <th className="px-6 py-3.5">Employee</th>
                   <th className="px-6 py-3.5">Employee ID</th>
@@ -439,33 +439,33 @@ function Employees() {
                   <th className="px-6 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-800/60">
                 {filtered.map((e) => {
                   const deptName = (e.departments as { name: string } | null)?.name ?? "General";
                   const isEnrolled = e.templates > 0;
 
                   return (
-                    <tr key={e.id} className="hover:bg-slate-50/80 transition-colors">
+                    <tr key={e.id} className="hover:bg-slate-800/40 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 text-white font-bold flex items-center justify-center shadow-xs text-xs">
+                          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-600 text-white font-bold flex items-center justify-center shadow-md shadow-indigo-500/20 text-xs">
                             {e.full_name.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <span className="font-bold text-slate-900 block text-sm">
+                            <span className="font-bold text-white block text-sm">
                               {e.full_name}
                             </span>
-                            <span className="text-xs text-slate-500">
+                            <span className="text-xs text-slate-400">
                               {e.job_title || "Staff Member"}
                             </span>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 font-mono text-xs font-bold text-indigo-700">
+                      <td className="px-6 py-4 font-mono text-xs font-bold text-indigo-400">
                         {e.employee_code}
                       </td>
                       <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800/80 text-slate-300 border border-slate-700/60">
                           {deptName}
                         </span>
                       </td>
@@ -507,8 +507,8 @@ function Employees() {
                                   templatesCount: e.templates,
                                 })
                               }
-                              icon={<Trash2 className="h-3.5 w-3.5 text-rose-600" />}
-                              className="hover:bg-rose-50 text-rose-700"
+                              icon={<Trash2 className="h-3.5 w-3.5 text-rose-400" />}
+                              className="hover:bg-rose-500/10 text-rose-400 cursor-pointer"
                             >
                               <span className="sr-only">Delete</span>
                             </Button>

@@ -56,56 +56,57 @@
 :root {
   --radius: 0.875rem;
 
-  /* Clean Crisp White / Light Slate Palette */
-  --background: #f8fafc; /* Slate-50 clean background */
-  --foreground: #0f172a; /* Slate-900 sharp high-contrast text */
-  --surface: #ffffff; /* Pure white surface */
-  --surface-foreground: #0f172a;
-  --surface-hover: #f1f5f9; /* Slate-100 hover */
-  --card: #ffffff; /* Crisp white card */
-  --card-foreground: #0f172a;
-  --popover: #ffffff;
-  --popover-foreground: #0f172a;
+  /* High-End Dark Obsidian / Charcoal Theme (21st.dev / Magic UI Standard) */
+  --background: #090d16; /* Deep obsidian background */
+  --foreground: #f8fafc; /* Sharp crisp white text */
+  --surface: #0f172a; /* Slate-900 surface */
+  --surface-foreground: #f8fafc;
+  --surface-hover: #1e293b; /* Slate-800 hover */
+  --card: #0f172a; /* Frosted dark card */
+  --card-foreground: #f8fafc;
+  --popover: #0f172a;
+  --popover-foreground: #f8fafc;
 
-  /* Primary Brand: Royal Electric Indigo / Blue */
-  --primary: #4f46e5; /* Indigo-600 */
+  /* Primary Brand: Royal Electric Indigo & Violet Glow */
+  --primary: #6366f1; /* Indigo-500 */
   --primary-foreground: #ffffff;
 
   /* Secondary & Muted */
-  --secondary: #f1f5f9; /* Slate-100 */
-  --secondary-foreground: #1e293b; /* Slate-800 */
-  --muted: #f8fafc;
-  --muted-foreground: #64748b; /* Slate-500 */
+  --secondary: #1e293b; /* Slate-800 */
+  --secondary-foreground: #e2e8f0; /* Slate-200 */
+  --muted: #131b2e;
+  --muted-foreground: #94a3b8; /* Slate-400 */
 
   /* Status Colors */
-  --accent: #2563eb; /* Blue-600 */
+  --accent: #06b6d4; /* Cyan-500 neon accent */
   --accent-foreground: #ffffff;
-  --success: #059669; /* Emerald-600 */
+  --success: #10b981; /* Emerald-500 vibrant */
   --success-foreground: #ffffff;
-  --warning: #d97706; /* Amber-600 */
+  --warning: #f59e0b; /* Amber-500 */
   --warning-foreground: #ffffff;
-  --destructive: #e11d48; /* Rose-600 */
+  --destructive: #f43f5e; /* Rose-500 */
   --destructive-foreground: #ffffff;
 
-  /* Precision Light Borders & Focus */
-  --border: #e2e8f0; /* Slate-200 */
-  --border-subtle: #f1f5f9;
-  --border-focus: #4f46e5;
-  --input: #e2e8f0;
-  --ring: #4f46e5;
+  /* Precision Dark Borders & Glass Highlights */
+  --border: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-focus: #6366f1;
+  --input: rgba(255, 255, 255, 0.08);
+  --ring: #6366f1;
 
-  /* Gradients & Shadows */
+  /* Radiant Gradients & Glass Glows */
   --gradient-hero:
-    radial-gradient(110% 85% at 50% -10%, rgba(99, 102, 241, 0.08) 0%, transparent 65%),
-    radial-gradient(80% 60% at 85% 15%, rgba(16, 185, 129, 0.05) 0%, transparent 60%),
-    radial-gradient(70% 50% at 15% 40%, rgba(59, 130, 246, 0.06) 0%, transparent 55%);
+    radial-gradient(110% 85% at 50% -10%, rgba(99, 102, 241, 0.18) 0%, transparent 65%),
+    radial-gradient(80% 60% at 85% 15%, rgba(16, 185, 129, 0.12) 0%, transparent 60%),
+    radial-gradient(70% 50% at 15% 40%, rgba(6, 182, 212, 0.12) 0%, transparent 55%);
 
-  --gradient-accent: linear-gradient(135deg, #4f46e5, #3b82f6);
-  --gradient-card: linear-gradient(180deg, #ffffff 0%, #fcfdfe 100%);
-  --shadow-panel: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 1px 3px 0 rgba(15, 23, 42, 0.03);
-  --shadow-panel-hover: 0 12px 28px -4px rgba(15, 23, 42, 0.1), 0 0 0 1px rgba(79, 70, 229, 0.2);
-  --glow-primary: 0 0 0 1px rgba(79, 70, 229, 0.3), 0 4px 20px -4px rgba(79, 70, 229, 0.25);
-  --glow-success: 0 0 0 1px rgba(5, 150, 105, 0.3), 0 4px 20px -4px rgba(5, 150, 105, 0.25);
+  --gradient-accent: linear-gradient(135deg, #6366f1, #06b6d4);
+  --gradient-glass: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.01) 100%);
+  --shadow-panel: 0 8px 32px 0 rgba(0, 0, 0, 0.37), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-panel-hover: 0 14px 40px 0 rgba(99, 102, 241, 0.2), 0 0 0 1px rgba(99, 102, 241, 0.4);
+  --glow-primary: 0 0 20px rgba(99, 102, 241, 0.4);
+  --glow-cyan: 0 0 20px rgba(6, 182, 212, 0.4);
+  --glow-success: 0 0 20px rgba(16, 185, 129, 0.4);
 }
 
 @layer base {
@@ -114,7 +115,7 @@
   }
 
   html {
-    color-scheme: light;
+    color-scheme: dark;
     scroll-behavior: smooth;
   }
 
@@ -139,13 +140,15 @@
   }
 }
 
-/* Premium Light Utilities */
+/* Premium Dark Glassmorphism Utilities (21st.dev / Magic UI Standard) */
 @utility panel {
-  background-color: var(--color-card);
-  background-image: var(--gradient-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-panel);
+  background-color: rgba(15, 23, 42, 0.75);
+  background-image: var(--gradient-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-2xl);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
   transition:
     border-color 0.25s ease,
     box-shadow 0.25s ease,
@@ -153,21 +156,40 @@
 }
 
 @utility panel-interactive {
-  background-color: var(--color-card);
-  background-image: var(--gradient-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-panel);
+  background-color: rgba(15, 23, 42, 0.75);
+  background-image: var(--gradient-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-2xl);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   &:hover {
-    border-color: #cbd5e1;
-    box-shadow: var(--shadow-panel-hover);
+    border-color: rgba(99, 102, 241, 0.4);
+    box-shadow: 0 14px 40px 0 rgba(99, 102, 241, 0.25), 0 0 20px rgba(99, 102, 241, 0.15);
     transform: translateY(-2px);
   }
 }
 
+@utility bento-card {
+  background-color: rgba(15, 23, 42, 0.65);
+  background-image: var(--gradient-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.5rem;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  &:hover {
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 20px 40px -15px rgba(99, 102, 241, 0.2);
+  }
+}
+
 @utility hero-surface {
-  background-color: #f8fafc;
+  background-color: #090d16;
   background-image: var(--gradient-hero);
   background-attachment: fixed;
 }
@@ -180,14 +202,19 @@
   box-shadow: var(--glow-primary);
 }
 
+@utility glow-cyan-ring {
+  box-shadow: var(--glow-cyan);
+}
+
 @utility glow-success-ring {
   box-shadow: var(--glow-success);
 }
 
 @utility glass-bar {
-  background-color: rgba(255, 255, 255, 0.88);
+  background-color: rgba(9, 13, 22, 0.85);
   backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid #e2e8f0;
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* Animations */
