@@ -385,6 +385,10 @@ function AuthPage() {
                       placeholder="name@company.com"
                       required
                       maxLength={255}
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      autoComplete="username email"
                     />
                   </Field>
 
@@ -416,6 +420,10 @@ function AuthPage() {
                           required
                           minLength={6}
                           maxLength={72}
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          spellCheck={false}
+                          autoComplete={mode === "signin" ? "current-password" : "new-password"}
                           className="pr-10"
                         />
                         <button

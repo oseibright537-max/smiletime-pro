@@ -249,6 +249,28 @@ function ConsoleLayout() {
         <Outlet />
       </main>
 
+      {/* Console Workspace Footer */}
+      <footer className="hidden md:block border-t border-slate-200 bg-white/60 backdrop-blur-xs py-4 px-6 mt-auto">
+        <div className="mx-auto max-w-7xl flex items-center justify-between text-xs text-slate-500">
+          <div className="flex items-center gap-3">
+            <span className="font-semibold text-slate-700">FaceTime Attendance</span>
+            <span>·</span>
+            <span>Zero-Photo Retention (RAM Vectors Only)</span>
+            <span>·</span>
+            <span className="inline-flex items-center gap-1 text-emerald-700 font-medium">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Engine Online
+            </span>
+          </div>
+          <div className="flex items-center gap-4">
+            <Link to="/kiosk" className="text-indigo-600 hover:text-indigo-700 font-semibold">
+              Launch Kiosk Terminal →
+            </Link>
+            <span>© {new Date().getFullYear()} Enterprise Suite</span>
+          </div>
+        </div>
+      </footer>
+
       {/* Mobile Sticky Bottom Navigation Bar (Visible only on < md screens) */}
       <div className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-lg px-2 py-1.5 flex items-center justify-around">
         {nav.map((item) => {

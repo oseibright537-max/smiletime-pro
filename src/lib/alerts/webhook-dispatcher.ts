@@ -77,20 +77,24 @@ export async function dispatchManagerAlert(
     return { success: false, message: "Early departure alerts are muted." };
   }
 
-  const emoji =
-    payload.severity === "critical" ? "🚨" : payload.severity === "warning" ? "⚠️" : "ℹ️";
+  const severityTag =
+    payload.severity === "critical"
+      ? "[CRITICAL]"
+      : payload.severity === "warning"
+        ? "[WARNING]"
+        : "[INFO]";
 
   let bodyData: unknown = {};
 
   if (config.channelType === "slack") {
     bodyData = {
-      text: `${emoji} *[FaceTime Biometric Alert]* ${payload.details}`,
+      text: `${severityTag} *[FaceTime Biometric Alert]* ${payload.details}`,
       blocks: [
         {
           type: "header",
           text: {
             type: "plain_text",
-            text: `${emoji} FaceTime Attendance Alert: ${payload.type.replace("_", " ").toUpperCase()}`,
+            text: `FaceTime Attendance Alert: ${payload.type.replace("_", " ").toUpperCase()}`,
           },
         },
         {
@@ -119,7 +123,7 @@ export async function dispatchManagerAlert(
           elements: [
             {
               type: "mrkdwn",
-              text: `📍 *Details:* ${payload.details} · _FaceTime Biometric Terminal Engine_`,
+              text: `*Details:* ${payload.details} · _FaceTime Biometric Terminal Engine_`,
             },
           ],
         },
@@ -127,7 +131,7 @@ export async function dispatchManagerAlert(
     };
   } else if (config.channelType === "discord") {
     bodyData = {
-      content: `${emoji} **FaceTime Biometric Alert**: ${payload.details}`,
+      content: `${severityTag} **FaceTime Biometric Alert**: ${payload.details}`,
       embeds: [
         {
           title: `Attendance Event: ${payload.type.replace("_", " ").toUpperCase()}`,

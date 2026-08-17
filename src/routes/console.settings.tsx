@@ -23,6 +23,8 @@ import {
   Award,
   Radio,
   ExternalLink,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,6 +65,9 @@ function SettingsPage() {
   const [busy, setBusy] = useState(false);
   const [companyName, setCompanyName] = useState(currentOrg?.name || "");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [confirmDeleteText, setConfirmDeleteText] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isComplianceModalOpen, setIsComplianceModalOpen] = useState(false);
@@ -139,19 +144,24 @@ function SettingsPage() {
     toast.success("Custom terminal branding and announcements saved.");
   };
 
-  // Update Password
+  // Update Password with Confirmation Check
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword.length < 6) {
-      toast.error("Password must be at least 6 characters");
+      toast.error("Password must be at least 6 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords do not match. Please ensure both passwords match.");
       return;
     }
     setBusy(true);
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
-      toast.success("Password updated successfully");
+      toast.success("Password updated successfully!");
       setNewPassword("");
+      setConfirmPassword("");
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -466,7 +476,7 @@ function SettingsPage() {
               </label>
             </div>
             <Input
-              placeholder="🎉 Quarterly All-Hands Meeting today at 3:00 PM in Conference Room A"
+              placeholder="Quarterly All-Hands Meeting today at 3:00 PM in Conference Room A"
               value={branding.kioskAnnouncement}
               onChange={(e) => setBranding({ ...branding, kioskAnnouncement: e.target.value })}
             />
@@ -572,20 +582,94 @@ function SettingsPage() {
 
         {/* Change Password Form */}
         <form onSubmit={handleUpdatePassword} className="space-y-4 pt-2">
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 font-display">
-            <KeyRound className="h-4 w-4 text-indigo-600" />
-            Update Password
-          </h3>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Input
-              type="password"
-              placeholder="Enter new password (min 6 chars)"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="max-w-md"
-              required
-            />
-            <Button type="submit" loading={busy} size="sm">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 font-display">
+              <KeyRound className="h-4 w-4 text-indigo-600" />
+              Update Account Password
+            </h3>
+            <span className="text-[11px] text-slate-500">Minimum 6 characters</span>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-600 font-display">
+                New Password
+              </label>
+              <div className="relative">
+                <Input
+                  type={showNewPassword ? "text" : "password"}
+                  placeholder="Enter new password (min 6 chars)"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="pr-10"
+                  required
+                  minLength={6}
+                  maxLength={72}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+                  title={showNewPassword ? "Hide password" : "Show password"}
+                >
+                  {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-600 font-display">
+                Confirm New Password
+              </label>
+              <div className="relative">
+                <Input
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="Confirm new password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="pr-10"
+                  required
+                  minLength={6}
+                  maxLength={72}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+                  title={showConfirmPassword ? "Hide password" : "Show password"}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {newPassword && confirmPassword && (
+            <div className="text-xs flex items-center gap-1.5 font-medium animate-in fade-in duration-150">
+              {newPassword === confirmPassword ? (
+                <span className="text-emerald-600 flex items-center gap-1">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Passwords match
+                </span>
+              ) : (
+                <span className="text-rose-600 flex items-center gap-1">
+                  <AlertTriangle className="h-3.5 w-3.5" /> Passwords do not match
+                </span>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-end pt-1">
+            <Button
+              type="submit"
+              loading={busy}
+              disabled={!newPassword || !confirmPassword || newPassword !== confirmPassword}
+              size="sm"
+              icon={<Save className="h-3.5 w-3.5" />}
+            >
               Save New Password
             </Button>
           </div>

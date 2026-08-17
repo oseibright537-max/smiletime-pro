@@ -13,10 +13,9 @@ const BRANDING_STORAGE_KEY = "facetime_company_branding_v1";
 export const DEFAULT_BRANDING: OrganizationBranding = {
   companyName: "FaceTime Technologies",
   customLogoUrl: "",
-  kioskWelcomeTitle: "Welcome to Workplace Biometric Station",
-  kioskAnnouncement:
-    "🎉 Reminder: Quarterly All-Hands Meeting today at 3:00 PM in Main Auditorium.",
-  kioskAnnouncementEnabled: true,
+  kioskWelcomeTitle: "Biometric Attendance Terminal",
+  kioskAnnouncement: "",
+  kioskAnnouncementEnabled: false,
   accentColor: "indigo",
   showCelebrationMilestones: true,
 };
