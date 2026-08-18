@@ -15,10 +15,8 @@ import {
   Building,
   Save,
   ShieldCheck,
-  Bell,
   Palette,
   Megaphone,
-  Send,
   Download,
   Award,
   Radio,
@@ -31,12 +29,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrganization } from "@/hooks/useOrganization";
 import { Badge, Button, Field, Input, Panel } from "@/components/ui/primitives";
-import {
-  getWebhookConfig,
-  saveWebhookConfig,
-  dispatchManagerAlert,
-  type AlertWebhookConfig,
-} from "@/lib/alerts/webhook-dispatcher";
 import {
   getBranding,
   saveBranding,
@@ -72,10 +64,6 @@ function SettingsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isComplianceModalOpen, setIsComplianceModalOpen] = useState(false);
 
-  // Webhook State (Feature 4)
-  const [webhookConfig, setWebhookConfig] = useState<AlertWebhookConfig>(() => getWebhookConfig());
-  const [testingWebhook, setTestingWebhook] = useState(false);
-
   // Branding State (Feature 10)
   const [branding, setBranding] = useState<OrganizationBranding>(() => getBranding());
 
@@ -101,39 +89,6 @@ function SettingsPage() {
       toast.error((err as Error).message);
     } finally {
       setBusy(false);
-    }
-  };
-
-  // Save Webhook Settings (Feature 4)
-  const handleSaveWebhooks = (e: React.FormEvent) => {
-    e.preventDefault();
-    saveWebhookConfig(webhookConfig);
-    toast.success("Manager alert webhook configuration saved.");
-  };
-
-  const handleTestWebhook = async () => {
-    if (!webhookConfig.webhookUrl) {
-      toast.error("Please enter a valid webhook URL first.");
-      return;
-    }
-    setTestingWebhook(true);
-    try {
-      const res = await dispatchManagerAlert({
-        type: "test",
-        employeeName: "Elena Rostova",
-        employeeCode: "EMP-104",
-        department: "Engineering",
-        timeStr: new Date().toLocaleTimeString(),
-        details: "Test webhook alert dispatched from FaceTime Console settings.",
-        severity: "info",
-      });
-      if (res.success) {
-        toast.success("Test alert payload sent to webhook destination!");
-      } else {
-        toast.error(res.message);
-      }
-    } finally {
-      setTestingWebhook(false);
     }
   };
 
@@ -240,8 +195,7 @@ function SettingsPage() {
           Company Settings & Security
         </h1>
         <p className="mt-1 text-xs sm:text-sm text-slate-500">
-          Manage company workspace details, biometric policies, manager alert webhooks, and
-          white-labeling.
+          Manage company workspace details, biometric policies, and white-labeling.
         </p>
       </div>
 
@@ -277,133 +231,6 @@ function SettingsPage() {
             View Legal DPA Certificate
           </Button>
         </div>
-      </Panel>
-
-      {/* FEATURE 4: Real-Time Manager Alert Webhooks (Slack, Teams, Discord) */}
-      <Panel className="bg-white border border-slate-200 shadow-sm rounded-3xl p-6 sm:p-8 space-y-6">
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-          <div className="flex items-center gap-3">
-            <div className="h-11 w-11 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shadow-2xs">
-              <Bell className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900 font-display">
-                Real-Time Manager Alert Webhooks
-              </h2>
-              <span className="text-xs text-slate-500">
-                Push instant late arrivals, overtime warnings, and unrecognized scans to Slack or
-                Teams
-              </span>
-            </div>
-          </div>
-
-          <Badge tone={webhookConfig.enabled ? "success" : "neutral"} size="md">
-            {webhookConfig.enabled ? "ACTIVE" : "PAUSED"}
-          </Badge>
-        </div>
-
-        <form onSubmit={handleSaveWebhooks} className="space-y-4 text-xs">
-          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
-            <div>
-              <span className="font-bold text-slate-900 block text-sm">
-                Enable Webhook Dispatches
-              </span>
-              <span className="text-slate-500">
-                Send automated notifications to your management channels
-              </span>
-            </div>
-            <input
-              type="checkbox"
-              checked={webhookConfig.enabled}
-              onChange={(e) => setWebhookConfig({ ...webhookConfig, enabled: e.target.checked })}
-              className="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-            />
-          </div>
-
-          <div className="grid sm:grid-cols-3 gap-3">
-            <div className="sm:col-span-2 space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-600 font-display">
-                Incoming Webhook URL
-              </label>
-              <Input
-                placeholder="https://hooks.slack.com/services/T00/B00/XXXXX"
-                value={webhookConfig.webhookUrl}
-                onChange={(e) => setWebhookConfig({ ...webhookConfig, webhookUrl: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-600 font-display">
-                Payload Standard
-              </label>
-              <select
-                value={webhookConfig.channelType}
-                onChange={(e) =>
-                  setWebhookConfig({
-                    ...webhookConfig,
-                    channelType: e.target.value as typeof webhookConfig.channelType,
-                  })
-                }
-                className="w-full h-10 rounded-xl border border-slate-300 bg-white px-3 text-xs text-slate-800 focus:outline-none"
-              >
-                <option value="slack">Slack Block Kit</option>
-                <option value="discord">Discord Embed</option>
-                <option value="teams">Microsoft Teams</option>
-                <option value="custom">Generic JSON API</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Alert Trigger Toggles */}
-          <div className="grid sm:grid-cols-2 gap-3 pt-2">
-            <label className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={webhookConfig.alertOnLateArrival}
-                onChange={(e) =>
-                  setWebhookConfig({ ...webhookConfig, alertOnLateArrival: e.target.checked })
-                }
-                className="h-4 w-4 rounded border-slate-300 text-indigo-600"
-              />
-              <div>
-                <span className="font-bold text-slate-800 block">Alert on Late Arrival</span>
-                <span className="text-[11px] text-slate-500">Flags clock-ins past 8:30 AM</span>
-              </div>
-            </label>
-
-            <label className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={webhookConfig.alertOnUnrecognized}
-                onChange={(e) =>
-                  setWebhookConfig({ ...webhookConfig, alertOnUnrecognized: e.target.checked })
-                }
-                className="h-4 w-4 rounded border-slate-300 text-indigo-600"
-              />
-              <div>
-                <span className="font-bold text-slate-800 block">Alert on Unrecognized Face</span>
-                <span className="text-[11px] text-slate-500">Flags unknown visitor scans</span>
-              </div>
-            </label>
-          </div>
-
-          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleTestWebhook}
-              loading={testingWebhook}
-              icon={<Send className="h-3.5 w-3.5 text-indigo-600" />}
-            >
-              Send Test Webhook Alert
-            </Button>
-
-            <Button type="submit" size="sm" icon={<Save className="h-3.5 w-3.5" />}>
-              Save Webhook Rules
-            </Button>
-          </div>
-        </form>
       </Panel>
 
       {/* FEATURE 10: White-Labeling & Custom Terminal Branding */}

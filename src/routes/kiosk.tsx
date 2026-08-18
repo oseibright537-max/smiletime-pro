@@ -51,7 +51,6 @@ import {
 } from "@/lib/attendance/time-windows";
 import { TimeWindowBanner } from "@/components/attendance/TimeWindowBanner";
 import { enqueueOfflinePunch, useOfflineSync } from "@/lib/offline/offline-sync";
-import { dispatchManagerAlert } from "@/lib/alerts/webhook-dispatcher";
 import { getBranding } from "@/lib/branding/branding-store";
 
 export const Route = createFileRoute("/kiosk")({
@@ -391,14 +390,6 @@ function Kiosk() {
         if (!matchEmployeeId || bestDistance > matchThreshold) {
           unrecognizedFramesCount.current += 1;
           if (unrecognizedFramesCount.current >= 2) {
-            // Dispatch webhook alert for unrecognized scan
-            void dispatchManagerAlert({
-              type: "unrecognized_scan",
-              timeStr: new Date().toLocaleTimeString(),
-              details: "Unrecognized face scan attempt detected at attendance kiosk.",
-              severity: "warning",
-            });
-
             finish({
               ok: false,
               message:
@@ -594,18 +585,6 @@ function Kiosk() {
               isOfflineQueued = true;
             }
           }
-        }
-
-        // Trigger real-time late alert if applicable
-        if (ruleCheck.isLate && !bypassShiftRules && resolvedKind === "check_in") {
-          void dispatchManagerAlert({
-            type: "late_arrival",
-            employeeName: matchFullName,
-            employeeCode: matchEmployeeCode,
-            timeStr: now.toLocaleTimeString(),
-            details: `${matchFullName} clocked in late (${finalStatusLabel}).`,
-            severity: "warning",
-          });
         }
 
         const { greeting, milestone } = getTimeGreeting(matchFullName, resolvedKind);
