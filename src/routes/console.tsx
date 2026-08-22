@@ -11,22 +11,22 @@ import {
   X,
   Shield,
   ExternalLink,
+  Building,
+  ChevronDown,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrganization } from "@/hooks/useOrganization";
 import { Badge, Button } from "@/components/ui/primitives";
 import { Logo } from "@/components/ui/logo";
-import { Building, ChevronDown } from "lucide-react";
 
 export const Route = createFileRoute("/console")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Console — FaceTime Attendance" },
+      { title: "Console — SmileTime Pro" },
       {
         name: "description",
-        content:
-          "Manage employees, face enrolment, and attendance activity in FaceTime Attendance.",
+        content: "Manage employees, face enrolment, and attendance activity in SmileTime Pro.",
       },
     ],
   }),
@@ -62,9 +62,9 @@ function ConsoleLayout() {
 
   if (loading || !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500 gap-3">
-        <div className="h-5 w-5 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
-        <span className="font-mono text-xs uppercase tracking-widest text-indigo-600 font-semibold">
+      <div className="flex min-h-screen items-center justify-center bg-[#FAFAFB] text-sm text-[#5C5A66] gap-3">
+        <div className="h-5 w-5 rounded-full border-2 border-[#1B1A20] border-t-transparent animate-spin" />
+        <span className="font-mono text-xs uppercase tracking-widest text-[#1B1A20] font-semibold">
           Authenticating session…
         </span>
       </div>
@@ -72,25 +72,25 @@ function ConsoleLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-indigo-500/20 selection:text-indigo-900 flex flex-col">
+    <div className="min-h-screen bg-[#FAFAFB] text-[#1B1A20] selection:bg-[#C7B8F5]/30 selection:text-[#1B1A20] flex flex-col font-sans">
       {/* Top Glass Navigation Header */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 py-2.5 sm:py-3">
+      <header className="sticky top-0 z-40 bg-[#FAFAFB]/85 backdrop-blur-md border-b border-[#ECEBF0]">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 py-3">
           {/* Left: Brand Logo & Organization Pill */}
-          <div className="flex items-center gap-3 sm:gap-4 lg:gap-6">
+          <div className="flex items-center gap-3 sm:gap-5 lg:gap-6">
             <Link to="/" className="group flex items-center">
-              <Logo size="sm" subtitle="Enterprise Hub" />
+              <Logo size="sm" subtitle="Workspace" />
             </Link>
 
             {/* Active Company Badge / Switcher */}
             {currentOrg && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50/90 border border-indigo-200/90 rounded-xl text-indigo-900 text-xs font-semibold shadow-2xs">
-                <Building className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-white border border-[#ECEBF0] rounded-full text-[#1B1A20] text-xs font-semibold shadow-2xs">
+                <Building className="h-3.5 w-3.5 text-[#5C5A66] shrink-0" />
                 {organizations.length > 1 ? (
                   <select
                     value={currentOrg.id}
                     onChange={(e) => switchOrganization(e.target.value)}
-                    className="bg-transparent font-bold text-indigo-900 text-xs focus:outline-none cursor-pointer pr-1"
+                    className="bg-transparent font-semibold text-[#1B1A20] text-xs focus:outline-none cursor-pointer pr-1"
                   >
                     {organizations.map((org) => (
                       <option key={org.id} value={org.id}>
@@ -99,25 +99,25 @@ function ConsoleLayout() {
                     ))}
                   </select>
                 ) : (
-                  <span className="max-w-[120px] sm:max-w-[160px] truncate font-bold text-indigo-900">
+                  <span className="max-w-[120px] sm:max-w-[160px] truncate font-semibold text-[#1B1A20]">
                     {currentOrg.name}
                   </span>
                 )}
               </div>
             )}
 
-            {/* Desktop Navigation Tabs (Hidden on Mobile/Tablet < md) */}
-            <nav className="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+            {/* Desktop Navigation Tabs */}
+            <nav className="hidden md:flex items-center gap-1 bg-[#F3F2F6] p-1 rounded-full border border-[#ECEBF0]">
               {nav.map((item) => {
                 const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
                 return (
                   <Link
                     key={item.to}
                     to={item.to}
-                    className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 ${
+                    className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-200 ${
                       active
-                        ? "bg-white text-slate-900 shadow-xs"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+                        ? "bg-white text-[#1B1A20] shadow-xs"
+                        : "text-[#5C5A66] hover:text-[#1B1A20]"
                     }`}
                   >
                     <item.icon className="h-3.5 w-3.5" />
@@ -130,7 +130,7 @@ function ConsoleLayout() {
 
           {/* Right: Actions & Mobile Hamburger */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Live Terminal status (Hidden on small mobile) */}
+            {/* Live Terminal status */}
             <div className="hidden sm:block">
               <Badge tone="success" pulse size="sm">
                 ONLINE
@@ -139,35 +139,38 @@ function ConsoleLayout() {
 
             {/* Primary role badge */}
             {roles.slice(0, 1).map((r) => (
-              <Badge key={r} tone="primary" size="sm" className="hidden xs:inline-flex">
+              <Badge key={r} tone="muted" size="sm" className="hidden xs:inline-flex">
                 {r.toUpperCase()}
               </Badge>
             ))}
 
             {/* Kiosk Mode Launcher */}
             <Link to="/kiosk" className="hidden sm:inline-flex">
-              <Button
-                size="sm"
-                variant="outline"
-                icon={<Zap className="h-3.5 w-3.5 text-indigo-600" />}
-              >
-                Kiosk
-              </Button>
+              <span className="bst-btn-wrap">
+                <span className="bst-btn-halo" />
+                <Button
+                  size="sm"
+                  className="bst-btn bst-btn--sm"
+                  icon={<Zap className="h-3.5 w-3.5 text-[#C7B8F5]" />}
+                >
+                  Kiosk
+                </Button>
+              </span>
             </Link>
 
             {/* Sign Out Button (Desktop) */}
             <button
               onClick={() => signOut()}
               title="Sign out of workspace"
-              className="hidden sm:inline-flex items-center justify-center h-8.5 w-8.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
+              className="hidden sm:inline-flex items-center justify-center h-8.5 w-8.5 rounded-full text-[#5C5A66] hover:text-[#D64545] hover:bg-[#FDF1F3] border border-[#ECEBF0] transition-colors cursor-pointer"
             >
               <LogOut className="h-4 w-4" />
             </button>
 
-            {/* Mobile Hamburger Toggle Button (< md) */}
+            {/* Mobile Hamburger Toggle Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden flex items-center justify-center h-9 w-9 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 transition-colors"
+              className="md:hidden flex items-center justify-center h-9 w-9 rounded-full bg-white hover:bg-[#F3F2F6] border border-[#ECEBF0] text-[#1B1A20] transition-colors"
               aria-label="Toggle mobile menu"
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -175,20 +178,19 @@ function ConsoleLayout() {
           </div>
         </div>
 
-        {/* Mobile Dropdown Menu (< md) */}
+        {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-5 space-y-3 animate-in slide-in-from-top-2 duration-200 shadow-xl">
-            {/* Status Pill */}
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100 text-xs">
+          <div className="md:hidden border-t border-[#ECEBF0] bg-white px-4 pt-3 pb-5 space-y-3 animate-in slide-in-from-top-2 duration-200 shadow-lg">
+            <div className="flex items-center justify-between pb-2 border-b border-[#ECEBF0] text-xs">
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-slate-700">System Status:</span>
+                <span className="font-semibold text-[#1B1A20]">System Status:</span>
                 <Badge tone="success" pulse size="sm">
                   ENGINE ONLINE
                 </Badge>
               </div>
               <div className="flex gap-1">
                 {roles.map((r) => (
-                  <Badge key={r} tone="primary" size="sm">
+                  <Badge key={r} tone="muted" size="sm">
                     {r.toUpperCase()}
                   </Badge>
                 ))}
@@ -204,22 +206,18 @@ function ConsoleLayout() {
                     key={item.to}
                     to={item.to}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 w-full rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all ${
-                      active
-                        ? "bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-xs"
-                        : "text-slate-700 hover:bg-slate-50"
+                    className={`flex items-center gap-3 w-full rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all ${
+                      active ? "bg-[#1B1A20] text-white" : "text-[#5C5A66] hover:bg-[#F3F2F6]"
                     }`}
                   >
-                    <item.icon
-                      className={`h-4 w-4 ${active ? "text-indigo-600" : "text-slate-500"}`}
-                    />
+                    <item.icon className={`h-4 w-4 ${active ? "text-white" : "text-[#9B99A6]"}`} />
                     <span>{item.label}</span>
                   </Link>
                 );
               })}
             </div>
 
-            {/* Mobile Actions Grid */}
+            {/* Mobile Actions */}
             <div className="pt-2 grid grid-cols-2 gap-2">
               <Link to="/kiosk" className="w-full" onClick={() => setMobileMenuOpen(false)}>
                 <Button
@@ -234,7 +232,7 @@ function ConsoleLayout() {
                 variant="outline"
                 size="sm"
                 onClick={() => signOut()}
-                className="w-full justify-center text-rose-700 hover:bg-rose-50 border-rose-200"
+                className="w-full justify-center text-[#D64545] hover:bg-[#FDF1F3] border-[#F5B8C4]"
                 icon={<LogOut className="h-4 w-4" />}
               >
                 Sign Out
@@ -245,46 +243,46 @@ function ConsoleLayout() {
       </header>
 
       {/* Main Workspace View */}
-      <main className="flex-1 mx-auto max-w-7xl w-full px-3 sm:px-6 py-5 sm:py-8 pb-20 md:pb-8">
+      <main className="flex-1 mx-auto max-w-7xl w-full px-4 sm:px-6 py-6 pb-20 md:pb-8">
         <Outlet />
       </main>
 
       {/* Console Workspace Footer */}
-      <footer className="hidden md:block border-t border-slate-200 bg-white/60 backdrop-blur-xs py-4 px-6 mt-auto">
-        <div className="mx-auto max-w-7xl flex items-center justify-between text-xs text-slate-500">
+      <footer className="hidden md:block border-t border-[#ECEBF0] bg-white py-4 px-6 mt-auto">
+        <div className="mx-auto max-w-7xl flex items-center justify-between text-xs text-[#5C5A66]">
           <div className="flex items-center gap-3">
-            <span className="font-semibold text-slate-700">FaceTime Attendance</span>
+            <span className="font-semibold text-[#1B1A20]">SmileTime Pro</span>
             <span>·</span>
             <span>Zero-Photo Retention (RAM Vectors Only)</span>
             <span>·</span>
-            <span className="inline-flex items-center gap-1 text-emerald-700 font-medium">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <span className="inline-flex items-center gap-1 text-[#2F9E63] font-medium">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#2F9E63]" />
               Engine Online
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <Link to="/kiosk" className="text-indigo-600 hover:text-indigo-700 font-semibold">
+            <Link to="/kiosk" className="text-[#1B1A20] font-semibold hover:underline">
               Launch Kiosk Terminal →
             </Link>
-            <span>© {new Date().getFullYear()} Enterprise Suite</span>
+            <span>© {new Date().getFullYear()} SmileTime</span>
           </div>
         </div>
       </footer>
 
-      {/* Mobile Sticky Bottom Navigation Bar (Visible only on < md screens) */}
-      <div className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-lg px-2 py-1.5 flex items-center justify-around">
+      {/* Mobile Sticky Bottom Navigation Bar */}
+      <div className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-[#ECEBF0] shadow-lg px-2 py-2 flex items-center justify-around">
         {nav.map((item) => {
           const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
           return (
             <Link
               key={item.to}
               to={item.to}
-              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-semibold transition-all ${
-                active ? "text-indigo-600 font-bold" : "text-slate-500 hover:text-slate-900"
+              className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl text-[10.5px] font-semibold transition-all ${
+                active ? "text-[#1B1A20] font-bold" : "text-[#9B99A6] hover:text-[#1B1A20]"
               }`}
             >
               <item.icon
-                className={`h-4 w-4 mb-0.5 ${active ? "text-indigo-600" : "text-slate-500"}`}
+                className={`h-4 w-4 mb-0.5 ${active ? "text-[#1B1A20]" : "text-[#9B99A6]"}`}
               />
               <span className="truncate max-w-[75px]">{item.label.split(" ")[0]}</span>
             </Link>
@@ -293,10 +291,10 @@ function ConsoleLayout() {
 
         <Link
           to="/kiosk"
-          className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-semibold text-indigo-600 hover:text-indigo-700"
+          className="flex flex-col items-center justify-center py-1 px-3 rounded-2xl text-[10.5px] font-semibold text-[#1B1A20]"
         >
-          <div className="h-4 w-4 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center mb-0.5">
-            <Zap className="h-3 w-3 text-indigo-600" />
+          <div className="h-4 w-4 rounded-full bg-[#F3EFFC] border border-[#C7B8F5] flex items-center justify-center mb-0.5">
+            <Zap className="h-3 w-3 text-[#7C5ED6]" />
           </div>
           <span>Kiosk</span>
         </Link>

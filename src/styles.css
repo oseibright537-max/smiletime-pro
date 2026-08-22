@@ -3,26 +3,182 @@
 @import "tw-animate-css";
 
 /*
- * Sentra enterprise design system.
- * Ultra-Clean Enterprise White / Slate Light Theme.
- * Crisp white surfaces, deep slate typography, royal indigo signals,
- * precision borders, and subtle diffused elevation shadows.
+ * Trustur AI / Bestie Design System.
+ * System UI typography stack, Ink-only action color, whisper triad accents,
+ * wash pastel tiles, subtle diffused elevation shadows, and hairline borders.
  */
 
+:root {
+  /* canvas + surfaces */
+  --canvas: #fafafb;
+  --card: #ffffff;
+  --line: #ecebf0;
+  --mist: #f3f2f6;
+  --mist-2: #efedf4;
+
+  /* inks */
+  --ink: #1b1a20;
+  --ink-2: #5c5a66;
+  --ink-3: #9b99a6;
+
+  /* the whisper triad */
+  --lavender: #c7b8f5;
+  --rose: #f5b8c4;
+  --sage: #b8e5c8;
+  --grad: linear-gradient(120deg, var(--lavender), var(--rose) 50%, var(--sage));
+  --grad-soft: linear-gradient(
+    120deg,
+    rgba(199, 184, 245, 0.55),
+    rgba(245, 184, 196, 0.55) 50%,
+    rgba(184, 229, 200, 0.55)
+  );
+
+  /* pastel wash tiles */
+  --wash-lilac: linear-gradient(160deg, #f3effc, #ede7fa);
+  --wash-rose: linear-gradient(160deg, #fdf1f3, #fbeaee);
+  --wash-sage: linear-gradient(160deg, #eef7f1, #e7f3ec);
+
+  /* the deep triad — logo & brand use */
+  --logo-violet: #7c5ed6;
+  --logo-rose: #d65e7c;
+  --logo-green: #349e66;
+  --logo-grad: linear-gradient(120deg, var(--logo-violet), var(--logo-rose) 50%, var(--logo-green));
+
+  /* status semantics */
+  --status-fail: #d64545;
+  --status-ok: #2f9e63;
+
+  /* semantic aliases */
+  --surface-page: var(--canvas);
+  --surface-card: var(--card);
+  --surface-quiet: var(--mist);
+  --text-body: var(--ink);
+  --text-secondary: var(--ink-2);
+  --text-tertiary: var(--ink-3);
+  --border-hairline: var(--line);
+  --action: var(--ink);
+  --action-fg: #ffffff;
+
+  /* type — system stack, zero webfont lag */
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --fs-display: clamp(28px, 4.8vw, 44px);
+  --fs-input: 15px;
+  --fs-title: 15.5px;
+  --fs-ws-title: 15px;
+  --fs-card-title: 14.5px;
+  --fs-body: 14px;
+  --fs-sub: 13px;
+  --fs-caption: 12px;
+  --fs-kicker: 11px;
+  --fs-tag: 10.5px;
+
+  --fw-strong: 650;
+  --fw-label: 600;
+  --fw-quiet: 500;
+  --fw-body: 400;
+
+  --ls-display: -0.025em;
+  --ls-tag: 0.14em;
+  --ls-kicker: 0.06em;
+  --lh-chat: 1.55;
+  --lh-title: 1.35;
+
+  /* space & shape */
+  --radius: 1rem;
+  --r-pill: 999px;
+  --r-card: 20px;
+  --r-card-lg: 24px;
+  --r-bubble: 18px;
+  --r-icon-tile: 12px;
+  --r-bubble-tail: 6px;
+
+  /* depth */
+  --shadow-soft: 0 6px 24px rgba(27, 26, 32, 0.05);
+  --shadow-whisper: 0 2px 10px rgba(27, 26, 32, 0.04);
+  --halo-blur: 80px;
+
+  /* standard shadcn semantic tokens mapped to Bestie tokens */
+  --background: var(--canvas);
+  --foreground: var(--ink);
+  --surface: var(--card);
+  --surface-foreground: var(--ink);
+  --surface-hover: var(--mist);
+  --card-bg: var(--card);
+  --card-foreground: var(--ink);
+  --popover: var(--card);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: #ffffff;
+  --secondary: var(--mist);
+  --secondary-foreground: var(--ink);
+  --muted: var(--mist);
+  --muted-foreground: var(--ink-2);
+  --accent: var(--mist-2);
+  --accent-foreground: var(--ink);
+  --destructive: var(--status-fail);
+  --destructive-foreground: #ffffff;
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--ink);
+}
+
+:root[data-theme="dark"],
+.dark {
+  color-scheme: dark;
+  --canvas: #131217;
+  --card: #1b1a20;
+  --line: #2b2934;
+  --mist: #232128;
+  --mist-2: #292730;
+  --ink: #f4f3f7;
+  --ink-2: #a8a6b4;
+  --ink-3: #82808e;
+  --action: #f4f3f7;
+  --action-fg: #16151a;
+  --logo-violet: #c7b8f5;
+  --logo-rose: #f5b8c4;
+  --logo-green: #b8e5c8;
+  --wash-lilac: linear-gradient(160deg, #221e2e, #1d1a28);
+  --wash-rose: linear-gradient(160deg, #2a1d22, #241a1f);
+  --wash-sage: linear-gradient(160deg, #182521, #15201d);
+  --shadow-soft: 0 6px 24px rgba(0, 0, 0, 0.45);
+  --shadow-whisper: 0 2px 10px rgba(0, 0, 0, 0.32);
+
+  --background: var(--canvas);
+  --foreground: var(--ink);
+  --surface: var(--card);
+  --surface-foreground: var(--ink);
+  --surface-hover: var(--mist);
+  --card-bg: var(--card);
+  --card-foreground: var(--ink);
+  --popover: var(--card);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: #16151a;
+  --secondary: var(--mist);
+  --secondary-foreground: var(--ink);
+  --muted: var(--mist);
+  --muted-foreground: var(--ink-2);
+  --accent: var(--mist-2);
+  --accent-foreground: var(--ink);
+  --destructive: var(--status-fail);
+  --destructive-foreground: #ffffff;
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--ink);
+}
+
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 14px);
+  --font-sans: var(--font-ui);
+  --font-display: var(--font-ui);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
   --color-surface-foreground: var(--surface-foreground);
   --color-surface-hover: var(--surface-hover);
-  --color-card: var(--card);
+  --color-card: var(--card-bg);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
@@ -34,95 +190,34 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
-  --color-success: var(--success);
-  --color-success-foreground: var(--success-foreground);
-  --color-warning: var(--warning);
-  --color-warning-foreground: var(--warning-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
-  --color-border-subtle: var(--border-subtle);
-  --color-border-focus: var(--border-focus);
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  --font-display:
-    "Outfit", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-sans:
-    "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
-}
-
-:root {
-  --radius: 0.875rem;
-
-  /* Clean Crisp White / Light Slate Palette */
-  --background: #f8fafc; /* Slate-50 clean background */
-  --foreground: #0f172a; /* Slate-900 sharp high-contrast text */
-  --surface: #ffffff; /* Pure white surface */
-  --surface-foreground: #0f172a;
-  --surface-hover: #f1f5f9; /* Slate-100 hover */
-  --card: #ffffff; /* Crisp white card */
-  --card-foreground: #0f172a;
-  --popover: #ffffff;
-  --popover-foreground: #0f172a;
-
-  /* Primary Brand: Royal Electric Indigo / Blue */
-  --primary: #4f46e5; /* Indigo-600 */
-  --primary-foreground: #ffffff;
-
-  /* Secondary & Muted */
-  --secondary: #f1f5f9; /* Slate-100 */
-  --secondary-foreground: #1e293b; /* Slate-800 */
-  --muted: #f8fafc;
-  --muted-foreground: #64748b; /* Slate-500 */
-
-  /* Status Colors */
-  --accent: #2563eb; /* Blue-600 */
-  --accent-foreground: #ffffff;
-  --success: #059669; /* Emerald-600 */
-  --success-foreground: #ffffff;
-  --warning: #d97706; /* Amber-600 */
-  --warning-foreground: #ffffff;
-  --destructive: #e11d48; /* Rose-600 */
-  --destructive-foreground: #ffffff;
-
-  /* Precision Light Borders & Focus */
-  --border: #e2e8f0; /* Slate-200 */
-  --border-subtle: #f1f5f9;
-  --border-focus: #4f46e5;
-  --input: #e2e8f0;
-  --ring: #4f46e5;
-
-  /* Gradients & Shadows */
-  --gradient-hero:
-    radial-gradient(110% 85% at 50% -10%, rgba(99, 102, 241, 0.08) 0%, transparent 65%),
-    radial-gradient(80% 60% at 85% 15%, rgba(16, 185, 129, 0.05) 0%, transparent 60%),
-    radial-gradient(70% 50% at 15% 40%, rgba(59, 130, 246, 0.06) 0%, transparent 55%);
-
-  --gradient-accent: linear-gradient(135deg, #4f46e5, #3b82f6);
-  --gradient-card: linear-gradient(180deg, #ffffff 0%, #fcfdfe 100%);
-  --shadow-panel: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 1px 3px 0 rgba(15, 23, 42, 0.03);
-  --shadow-panel-hover: 0 12px 28px -4px rgba(15, 23, 42, 0.1), 0 0 0 1px rgba(79, 70, 229, 0.2);
-  --glow-primary: 0 0 0 1px rgba(79, 70, 229, 0.3), 0 4px 20px -4px rgba(79, 70, 229, 0.25);
-  --glow-success: 0 0 0 1px rgba(5, 150, 105, 0.3), 0 4px 20px -4px rgba(5, 150, 105, 0.25);
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 6px);
+  --radius-2xl: calc(var(--radius) + 10px);
 }
 
 @layer base {
   * {
-    border-color: var(--color-border);
+    border-color: var(--line);
   }
 
   html {
-    color-scheme: light;
     scroll-behavior: smooth;
   }
 
   body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-    font-family: var(--font-sans);
-    letter-spacing: -0.011em;
+    background-color: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: var(--fs-body);
+    line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
@@ -134,125 +229,312 @@
   h4,
   h5,
   h6 {
-    font-family: var(--font-display);
-    letter-spacing: -0.025em;
+    font-family: var(--font-ui);
+    font-weight: var(--fw-strong);
+    letter-spacing: var(--ls-display);
+    color: var(--ink);
   }
 }
 
-/* Premium Light Utilities */
-@utility panel {
-  background-color: var(--color-card);
-  background-image: var(--gradient-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-panel);
+/* ── Trustur Bestie Button System ── */
+.bst-btn-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.bst-btn-halo {
+  position: absolute;
+  inset: -5px;
+  border-radius: var(--r-pill);
+  background: var(--grad);
+  filter: blur(10px);
+  opacity: 0;
+  transition: opacity 0.25s cubic-bezier(0.25, 0.6, 0.3, 1);
+  pointer-events: none;
+}
+
+.bst-btn-wrap:hover .bst-btn-halo {
+  opacity: 0.45;
+}
+
+.bst-btn {
+  position: relative;
+  border-radius: var(--r-pill);
+  font-weight: var(--fw-strong);
+  font-family: var(--font-ui);
+  cursor: pointer;
+  padding: 10px 20px;
+  font-size: var(--fs-body);
+  background: var(--action);
+  color: var(--action-fg);
+  border: 1px solid var(--action);
+  transform: scale(1);
   transition:
-    border-color 0.25s ease,
-    box-shadow 0.25s ease,
-    transform 0.25s ease;
+    transform 0.12s cubic-bezier(0.25, 0.6, 0.3, 1),
+    border-color 0.2s,
+    color 0.2s,
+    box-shadow 0.25s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  box-sizing: border-box;
+  line-height: 1.2;
 }
 
-@utility panel-interactive {
-  background-color: var(--color-card);
-  background-image: var(--gradient-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-panel);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  &:hover {
-    border-color: #cbd5e1;
-    box-shadow: var(--shadow-panel-hover);
-    transform: translateY(-2px);
-  }
+.bst-btn:not(.bst-btn--ghost):not(.bst-btn--quiet):hover {
+  box-shadow:
+    -7px 0 16px rgba(199, 184, 245, 0.45),
+    0 0 16px rgba(245, 184, 196, 0.4),
+    7px 0 16px rgba(184, 229, 200, 0.45);
 }
 
-@utility hero-surface {
-  background-color: #f8fafc;
-  background-image: var(--gradient-hero);
-  background-attachment: fixed;
+.bst-btn:active {
+  transform: scale(0.97);
 }
 
-@utility accent-surface {
-  background-image: var(--gradient-accent);
+.bst-btn--sm {
+  padding: 7px 15px;
+  font-size: var(--fs-sub);
 }
 
-@utility glow-ring {
-  box-shadow: var(--glow-primary);
+.bst-btn--lg {
+  padding: 13px 26px;
+  font-size: 15.5px;
 }
 
-@utility glow-success-ring {
-  box-shadow: var(--glow-success);
+.bst-btn--ghost {
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--line);
 }
 
-@utility glass-bar {
-  background-color: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid #e2e8f0;
+.bst-btn--ghost:hover {
+  border-color: var(--ink-3);
+  background: var(--mist);
 }
 
-/* Animations */
+.bst-btn--quiet {
+  background: transparent;
+  color: var(--ink-2);
+  border: 1px solid transparent;
+}
+
+.bst-btn--quiet:hover {
+  color: var(--ink);
+  background: var(--mist);
+}
+
+/* ── Halos & Gradient Ambient ── */
+.bst-halo {
+  position: absolute;
+  background: var(--grad);
+  pointer-events: none;
+  filter: blur(var(--halo-blur));
+}
+
+.ln-halo--hero {
+  left: 50%;
+  top: -40px;
+  width: 640px;
+  height: 340px;
+  transform: translateX(-50%);
+  opacity: 0.22;
+}
+
+.ln-halo--profile {
+  right: -60px;
+  top: -80px;
+  width: 340px;
+  height: 280px;
+  opacity: 0.16;
+}
+
+.ln-halo--closing {
+  left: 50%;
+  top: 50%;
+  width: 520px;
+  height: 300px;
+  transform: translate(-50%, -50%);
+  opacity: 0.18;
+}
+
+/* ── Gradient Wordmark ── */
+.bst-wordmark {
+  font-weight: var(--fw-strong);
+  letter-spacing: var(--ls-display);
+  background: var(--logo-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ── Wash Tiles ── */
+.bst-wash {
+  border-radius: var(--r-card);
+  padding: 20px;
+  min-height: 128px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+  transition:
+    transform 0.2s cubic-bezier(0.25, 0.6, 0.3, 1),
+    box-shadow 0.2s;
+  border: 1px solid var(--line);
+}
+
+.bst-wash:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-soft);
+}
+
+.bst-wash--lilac {
+  background: var(--wash-lilac);
+}
+
+.bst-wash--rose {
+  background: var(--wash-rose);
+}
+
+.bst-wash--sage {
+  background: var(--wash-sage);
+}
+
+.bst-wash .bst-kicker {
+  color: var(--ink-2);
+}
+
+.bst-wash b {
+  display: block;
+  font-size: var(--fs-title);
+  font-weight: var(--fw-strong);
+  line-height: var(--lh-title);
+  color: var(--ink);
+}
+
+.bst-wash small {
+  display: block;
+  font-size: var(--fs-caption);
+  color: var(--ink-2);
+  margin-top: 4px;
+}
+
+/* ── Kickers, Tags & Chips ── */
+.bst-kicker {
+  font-size: var(--fs-kicker);
+  font-weight: var(--fw-strong);
+  letter-spacing: var(--ls-kicker);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.bst-tag {
+  font-size: var(--fs-tag);
+  font-weight: var(--fw-label);
+  letter-spacing: var(--ls-tag);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.bst-chip {
+  padding: 6px 14px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-sub);
+  font-family: var(--font-ui);
+  color: var(--ink-2);
+  background: var(--card);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  box-sizing: border-box;
+  line-height: 1.2;
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    transform 0.12s;
+}
+
+.bst-chip:hover {
+  border-color: var(--ink-3);
+  color: var(--ink);
+}
+
+.bst-chip--selected {
+  color: #ffffff;
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+/* ── Bestie Avatar (Hairline Ring) ── */
+.bst-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-pill);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  background: var(--mist-2);
+  position: relative;
+  font-weight: var(--fw-strong);
+  font-size: 14px;
+}
+
+/* ── Chat Bubbles & Cards ── */
+.bst-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card-lg);
+  padding: 24px;
+  box-sizing: border-box;
+  box-shadow: var(--shadow-whisper);
+}
+
+.bst-icon-tile {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-icon-tile);
+  background: var(--mist);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--ink);
+}
+
+/* ── Scanline & Keyframes ── */
 @keyframes scanline {
   0% {
-    top: 5%;
-    opacity: 0.1;
+    top: 6%;
+    opacity: 0.15;
   }
   20% {
-    opacity: 0.9;
+    opacity: 0.95;
   }
   80% {
-    opacity: 0.9;
+    opacity: 0.95;
   }
   100% {
     top: 92%;
-    opacity: 0.1;
-  }
-}
-
-@keyframes radarSweep {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
+    opacity: 0.15;
   }
 }
 
 @keyframes pulseGlow {
   0%,
   100% {
-    opacity: 1;
+    opacity: 0.3;
     transform: scale(1);
   }
   50% {
-    opacity: 0.55;
-    transform: scale(1.08);
-  }
-}
-
-@keyframes floatGentle {
-  0%,
-  100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-5px);
-  }
-}
-
-@keyframes shimmerEffect {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-@keyframes badgePing {
-  75%,
-  100% {
-    transform: scale(2);
-    opacity: 0;
+    opacity: 0.85;
+    transform: scale(1.04);
   }
 }
 
@@ -260,50 +542,30 @@
   animation: scanline 2.6s ease-in-out infinite alternate;
 }
 
-.animate-radar {
-  animation: radarSweep 6s linear infinite;
-}
-
 .animate-pulse-glow {
   animation: pulseGlow 2.5s ease-in-out infinite;
 }
 
-.animate-float {
-  animation: floatGentle 4s ease-in-out infinite;
-}
-
-.animate-ping-slow {
-  animation: badgePing 2s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-
-/* Custom Clean Scrollbar */
+/* ── Clean Scrollbars ── */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 9999px;
+  background: var(--line);
+  border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--ink-3);
 }
 
-/* Hide scrollbars for mobile tab lists */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
-}
-
-/* Mobile tap target & text responsiveness */
-@media (max-width: 640px) {
-  html {
-    -webkit-text-size-adjust: 100%;
-  }
 }

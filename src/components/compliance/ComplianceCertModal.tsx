@@ -31,13 +31,13 @@ export function ComplianceCertModal({
     const textContent = `========================================================================
 BIOMETRIC DATA PROCESSING ADDENDUM & ZERO-PHOTO PRIVACY GUARANTEE
 ========================================================================
-Issuer: FaceTime Attendance Technologies Inc.
+Issuer: SmileTime Attendance Technologies Inc.
 Organization: ${companyName}
 Standard Compliance: GDPR Art. 9, CCPA, Illinois BIPA (740 ILCS 14/)
 Certificate ID: DPA-${Math.random().toString(36).substring(2, 10).toUpperCase()}-2026
 
 1. ZERO RAW PHOTO STORAGE GUARANTEE
-   FaceTime Biometrics operates on a strict zero-raw-photo policy. At no point
+   SmileTime Biometrics operates on a strict zero-raw-photo policy. At no point
    during operation are camera frames, facial photographs, or raw raster images
    written to persistent storage, disk partitions, or transmitted over network APIs.
 
@@ -57,7 +57,7 @@ Certificate ID: DPA-${Math.random().toString(36).substring(2, 10).toUpperCase()}
    Euclidean distance, and anti-spoof liveness verification.
 
 Authorized Electronic Signature:
-FaceTime Biometrics Compliance Officer
+SmileTime Biometrics Compliance Officer
 Certified Date: ${new Date().toLocaleDateString()}
 ========================================================================`;
 
@@ -65,7 +65,7 @@ Certified Date: ${new Date().toLocaleDateString()}
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `FaceTime_Biometric_Compliance_DPA_${companyName.replace(/\s+/g, "_")}.txt`;
+    link.download = `SmileTime_Biometric_Compliance_DPA_${companyName.replace(/\s+/g, "_")}.txt`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

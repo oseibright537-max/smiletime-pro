@@ -149,7 +149,7 @@ export function PayrollSyncModal({ isOpen, onClose, events }: PayrollSyncModalPr
           new Date().toISOString().slice(0, 10),
           "On-Site Shift",
           estHours.toFixed(2),
-          "FaceTime Zero-Photo Terminal Verified",
+          "SmileTime Zero-Photo Terminal Verified",
           "IRREVERSIBLE_128D_OK",
         ];
       });

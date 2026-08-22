@@ -124,24 +124,22 @@ function StatCard({
   trend?: string | undefined;
 }) {
   const tones = {
-    primary: "border-indigo-100 bg-indigo-50 text-indigo-600",
-    success: "border-emerald-100 bg-emerald-50 text-emerald-600",
-    warning: "border-amber-100 bg-amber-50 text-amber-600",
-    neutral: "border-slate-200 bg-slate-50 text-slate-600",
-    danger: "border-rose-100 bg-rose-50 text-rose-600",
+    primary: "border-[#C7B8F5] bg-[#F3EFFC] text-[#7C5ED6]",
+    success: "border-[#B8E5C8] bg-[#EEF7F1] text-[#2F9E63]",
+    warning: "border-[#FDE68A] bg-[#FDF6E2] text-[#B45309]",
+    neutral: "border-[#ECEBF0] bg-[#F3F2F6] text-[#5C5A66]",
+    danger: "border-[#F5B8C4] bg-[#FDF1F3] text-[#D64545]",
   };
 
   return (
     <Panel
       interactive
-      className="relative overflow-hidden p-4 sm:p-5 flex flex-col justify-between bg-white border border-slate-200 shadow-sm rounded-2xl"
+      className="relative overflow-hidden p-4 sm:p-5 flex flex-col justify-between bg-white border border-[#ECEBF0] shadow-[0_2px_10px_rgba(27,26,32,0.04)] rounded-[22px]"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 font-display truncate">
-            {label}
-          </p>
-          <p className="mt-1.5 sm:mt-2 font-display text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          <p className="bst-kicker truncate">{label}</p>
+          <p className="mt-1.5 sm:mt-2 text-2xl sm:text-3xl font-bold text-[#1B1A20] tracking-[-0.025em]">
             {value}
           </p>
         </div>
@@ -152,10 +150,10 @@ function StatCard({
         </div>
       </div>
 
-      <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
-        <span className="text-slate-500 text-[11px] truncate">{hint}</span>
+      <div className="mt-3 pt-2.5 border-t border-[#ECEBF0] flex items-center justify-between text-xs">
+        <span className="text-[#9B99A6] text-[11.5px] truncate">{hint}</span>
         {trend && (
-          <span className="inline-flex items-center text-emerald-600 font-bold text-[11px] shrink-0 ml-1">
+          <span className="inline-flex items-center text-[#2F9E63] font-bold text-[11px] shrink-0 ml-1">
             {trend}
             <ArrowUpRight className="h-3 w-3" />
           </span>
@@ -298,44 +296,43 @@ function Overview() {
         e.liveness_score != null
           ? `${Math.round(e.liveness_score * 100)}% Verified`
           : "Verified Biometric",
-        e.device_label || "FaceTime Terminal",
+        e.device_label || "SmileTime Terminal",
       ];
     });
 
     const csvContent = generateCsvString(headers, rows);
     downloadCsvBlob(
-      `facetime_attendance_master_${new Date().toISOString().slice(0, 10)}.csv`,
+      `smiletime_attendance_master_${new Date().toISOString().slice(0, 10)}.csv`,
       csvContent,
     );
   };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto">
       {/* Top Header & Fast Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#ECEBF0]">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 font-display">
+            <h1 className="text-2xl font-bold tracking-[-0.025em] text-[#1B1A20]">
               Workforce Intelligence
             </h1>
             <Badge tone="success" pulse size="sm">
               ENGINE LIVE
             </Badge>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 max-w-xl">
+          <p className="text-xs text-[#5C5A66] max-w-xl">
             Real-time biometric attendance telemetry, automated shift verification, and 1-click
             payroll integration.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-          {/* Payroll Sync Button */}
+        <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsPayrollModalOpen(true)}
-            icon={<FileSpreadsheet className="h-4 w-4 text-indigo-600" />}
-            className="flex-1 sm:flex-none justify-center rounded-xl bg-white hover:bg-slate-50 border-slate-200 text-slate-700 font-semibold"
+            icon={<FileSpreadsheet className="h-4 w-4 text-[#7C5ED6]" />}
+            className="flex-1 sm:flex-none justify-center"
           >
             Payroll Sync
           </Button>
@@ -345,21 +342,24 @@ function Overview() {
             size="sm"
             onClick={exportAllCsv}
             disabled={events.length === 0}
-            icon={<Download className="h-4 w-4 text-slate-500" />}
-            className="flex-1 sm:flex-none justify-center rounded-xl bg-white hover:bg-slate-50 border-slate-200 text-slate-700"
+            icon={<Download className="h-4 w-4 text-[#5C5A66]" />}
+            className="flex-1 sm:flex-none justify-center"
           >
             Export CSV
           </Button>
 
-          <Link to="/kiosk" className="w-full sm:w-auto">
-            <Button
-              size="sm"
-              icon={<ScanFace className="h-4 w-4" />}
-              className="w-full justify-center rounded-xl shadow-md shadow-indigo-600/20 font-bold"
-            >
-              Launch Kiosk
-            </Button>
-          </Link>
+          <span className="bst-btn-wrap flex-1 sm:flex-none">
+            <span className="bst-btn-halo" />
+            <Link to="/kiosk" className="w-full">
+              <Button
+                size="sm"
+                icon={<ScanFace className="h-4 w-4" />}
+                className="bst-btn bst-btn--sm w-full justify-center"
+              >
+                Launch Kiosk
+              </Button>
+            </Link>
+          </span>
         </div>
       </div>
 
@@ -367,7 +367,7 @@ function Overview() {
       <TimeWindowBanner showRulesGuide={false} />
 
       {/* Primary KPI Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
         <StatCard
           label="Present Today"
           value={isLoading ? "—" : data!.present}
@@ -409,74 +409,74 @@ function Overview() {
       </div>
 
       {/* View Selector Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-3 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0">
+      <div className="flex items-center gap-2 border-b border-[#ECEBF0] pb-3 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0">
         <button
           onClick={() => setActiveTab("live")}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap ${
+          className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap ${
             activeTab === "live"
-              ? "bg-slate-900 text-white shadow-xs"
-              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80"
+              ? "bg-[#1B1A20] text-white shadow-xs"
+              : "bg-white text-[#5C5A66] hover:bg-[#F3F2F6] border border-[#ECEBF0]"
           }`}
         >
-          <Activity className="h-4 w-4" />
+          <Activity className="h-3.5 w-3.5" />
           <span>Live Stream</span>
         </button>
 
         <button
           onClick={() => setActiveTab("analytics")}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap ${
+          className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap ${
             activeTab === "analytics"
-              ? "bg-slate-900 text-white shadow-xs"
-              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80"
+              ? "bg-[#1B1A20] text-white shadow-xs"
+              : "bg-white text-[#5C5A66] hover:bg-[#F3F2F6] border border-[#ECEBF0]"
           }`}
         >
-          <BarChart3 className="h-4 w-4" />
+          <BarChart3 className="h-3.5 w-3.5" />
           <span>Analytics & Trends</span>
         </button>
 
         <button
           onClick={() => setActiveTab("monthly")}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap ${
+          className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap ${
             activeTab === "monthly"
-              ? "bg-slate-900 text-white shadow-xs"
-              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80"
+              ? "bg-[#1B1A20] text-white shadow-xs"
+              : "bg-white text-[#5C5A66] hover:bg-[#F3F2F6] border border-[#ECEBF0]"
           }`}
         >
-          <FileSpreadsheet className="h-4 w-4" />
+          <FileSpreadsheet className="h-3.5 w-3.5" />
           <span>Monthly Timesheets</span>
         </button>
       </div>
 
       {/* TAB 1: Live Recognition Telemetry Log */}
       {activeTab === "live" && (
-        <Panel className="p-0 overflow-hidden border border-slate-200 bg-white rounded-3xl shadow-sm animate-in fade-in duration-200">
+        <Panel className="p-0 overflow-hidden border border-[#ECEBF0] bg-white rounded-[24px] shadow-[0_2px_10px_rgba(27,26,32,0.04)] animate-in fade-in duration-200">
           {/* Table Header & Filters */}
-          <div className="border-b border-slate-200 px-4 sm:px-6 py-3.5 sm:py-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/70">
+          <div className="border-b border-[#ECEBF0] px-4 sm:px-6 py-3.5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#FAFAFB]">
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight font-display flex items-center gap-2">
-                <Activity className="h-4 w-4 text-indigo-600 shrink-0" />
+              <h2 className="text-sm font-bold text-[#1B1A20] tracking-tight flex items-center gap-2">
+                <Activity className="h-4 w-4 text-[#7C5ED6] shrink-0" />
                 <span>Live Recognition Stream — Today</span>
               </h2>
-              <span className="text-xs text-slate-500 block mt-0.5">
-                Every event records on-device Euclidean match distance and 3D anti-spoof liveness.
+              <span className="text-xs text-[#9B99A6] block mt-0.5">
+                Every event records on-device Euclidean distance & 3D anti-spoof liveness.
               </span>
             </div>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <div className="relative w-full sm:w-60">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#9B99A6]" />
                 <Input
                   placeholder="Filter by name or code..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 h-9 text-xs w-full"
+                  className="pl-9 h-9 text-xs w-full rounded-full"
                 />
               </div>
 
               <select
                 value={filterKind}
                 onChange={(e) => setFilterKind(e.target.value)}
-                className="h-9 rounded-xl border border-slate-300 bg-white px-3 text-xs text-slate-800 focus:border-indigo-600 focus:outline-none cursor-pointer shrink-0"
+                className="h-9 rounded-full border border-[#ECEBF0] bg-white px-3.5 text-xs text-[#1B1A20] focus:border-[#1B1A20] focus:outline-none cursor-pointer shrink-0"
               >
                 <option value="all">All Events</option>
                 <option value="check_in">Clock In</option>
@@ -487,19 +487,19 @@ function Overview() {
 
           {/* Table Content */}
           {isLoading ? (
-            <div className="px-6 py-12 text-center text-sm text-slate-500 flex items-center justify-center gap-2">
-              <div className="h-4 w-4 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
+            <div className="px-6 py-12 text-center text-sm text-[#5C5A66] flex items-center justify-center gap-2">
+              <div className="h-4 w-4 rounded-full border-2 border-[#1B1A20] border-t-transparent animate-spin" />
               Loading live events...
             </div>
           ) : events.length === 0 ? (
             <div className="px-6 py-16 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 border border-slate-200 text-slate-500 mb-3">
-                <ScanFace className="h-6 w-6 text-indigo-600" />
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#F3F2F6] border border-[#ECEBF0] text-[#5C5A66] mb-3">
+                <ScanFace className="h-6 w-6 text-[#1B1A20]" />
               </div>
-              <h3 className="text-base font-semibold text-slate-900">
+              <h3 className="text-base font-semibold text-[#1B1A20]">
                 No attendance events logged yet today
               </h3>
-              <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
+              <p className="mt-1 text-xs text-[#5C5A66] max-w-sm mx-auto">
                 Launch the attendance kiosk terminal to start scanning enrolled employees.
               </p>
               <div className="mt-5">
@@ -513,7 +513,7 @@ function Overview() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs sm:text-sm min-w-[760px]">
-                <thead className="border-b border-slate-200 bg-slate-100/70 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 font-display">
+                <thead className="border-b border-[#ECEBF0] bg-[#FAFAFB] text-[11px] font-semibold uppercase tracking-wider text-[#9B99A6]">
                   <tr>
                     <th className="px-4 sm:px-6 py-3">Employee</th>
                     <th className="px-4 sm:px-6 py-3">Event Type</th>
@@ -524,7 +524,7 @@ function Overview() {
                     <th className="px-4 sm:px-6 py-3 text-right">Audit Trail</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-[#ECEBF0]">
                   {events.map((e) => {
                     const emp = e.employees as {
                       full_name: string;
@@ -540,17 +540,15 @@ function Overview() {
                     const classification = computeEventClassification(e.occurred_at, e.kind);
 
                     return (
-                      <tr key={e.id} className="hover:bg-slate-50 transition-colors">
+                      <tr key={e.id} className="hover:bg-[#FAFAFB] transition-colors">
                         <td className="px-6 py-3.5">
                           <div className="flex items-center gap-3">
                             <Avatar name={name} size="sm" />
                             <div>
-                              <span className="font-semibold text-slate-900 block text-sm">
+                              <span className="font-semibold text-[#1B1A20] block text-sm">
                                 {name}
                               </span>
-                              <span className="font-mono text-xs text-indigo-700 font-bold">
-                                {code}
-                              </span>
+                              <span className="font-mono text-xs text-[#5C5A66]">{code}</span>
                             </div>
                           </div>
                         </td>
@@ -564,20 +562,20 @@ function Overview() {
                         </td>
                         <td className="px-6 py-3.5">
                           <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border ${
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
                               classification.tone === "success"
-                                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                ? "bg-[#EEF7F1] text-[#2F9E63] border-[#B8E5C8]"
                                 : classification.tone === "warning"
-                                  ? "bg-amber-50 text-amber-800 border-amber-200"
+                                  ? "bg-[#FDF6E2] text-[#B45309] border-[#FDE68A]"
                                   : classification.tone === "primary"
-                                    ? "bg-indigo-50 text-indigo-800 border-indigo-200"
-                                    : "bg-rose-50 text-rose-800 border-rose-200"
+                                    ? "bg-[#F3EFFC] text-[#7C5ED6] border-[#C7B8F5]"
+                                    : "bg-[#FDF1F3] text-[#D64545] border-[#F5B8C4]"
                             }`}
                           >
                             {classification.label}
                           </span>
                         </td>
-                        <td className="px-6 py-3.5 font-mono text-xs text-slate-600">
+                        <td className="px-6 py-3.5 font-mono text-xs text-[#5C5A66]">
                           {new Date(e.occurred_at).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
@@ -586,22 +584,22 @@ function Overview() {
                         </td>
                         <td className="px-6 py-3.5">
                           <div className="flex items-center gap-2">
-                            <div className="w-14 h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                            <div className="w-14 h-1.5 rounded-full bg-[#ECEBF0] overflow-hidden">
                               <div
-                                className="h-full bg-indigo-600 rounded-full"
+                                className="h-full bg-[#1B1A20] rounded-full"
                                 style={{
                                   width: `${Math.min(100, Math.round((e.confidence ?? 0.8) * 100))}%`,
                                 }}
                               />
                             </div>
-                            <span className="font-mono text-xs text-indigo-700 font-semibold">
+                            <span className="font-mono text-xs text-[#1B1A20] font-semibold">
                               {e.confidence != null ? `${Math.round(e.confidence * 100)}%` : "96%"}
                             </span>
                           </div>
                         </td>
                         <td className="px-6 py-3.5">
-                          <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-medium">
-                            <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                          <div className="flex items-center gap-1.5 text-xs text-[#2F9E63] font-medium">
+                            <ShieldCheck className="h-3.5 w-3.5 text-[#2F9E63] shrink-0" />
                             <span>
                               {e.liveness_score != null
                                 ? `${Math.round(e.liveness_score * 100)}% Verified`
@@ -624,12 +622,12 @@ function Overview() {
                                 occurred_at: e.occurred_at,
                                 confidence: e.confidence ?? 0.96,
                                 liveness_score: e.liveness_score ?? 0.98,
-                                device_label: e.device_label || "FaceTime Kiosk Terminal",
+                                device_label: e.device_label || "SmileTime Kiosk Terminal",
                                 status: classification.label,
                               });
                             }}
-                            icon={<Terminal className="h-3 w-3 text-indigo-600" />}
-                            className="text-xs text-indigo-700 hover:bg-indigo-50"
+                            icon={<Terminal className="h-3 w-3 text-[#5C5A66]" />}
+                            className="text-xs text-[#5C5A66] hover:text-[#1B1A20]"
                           >
                             Inspect
                           </Button>

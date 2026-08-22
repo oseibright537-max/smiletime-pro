@@ -40,7 +40,7 @@ import { ComplianceCertModal } from "@/components/compliance/ComplianceCertModal
 export const Route = createFileRoute("/console/settings")({
   head: () => ({
     meta: [
-      { title: "Company Settings & Security — FaceTime Attendance" },
+      { title: "Company Settings & Security — SmileTime Pro" },
       {
         name: "description",
         content: "Manage company settings, multi-tenant preferences, and security lifecycle.",

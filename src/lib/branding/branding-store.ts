@@ -11,7 +11,7 @@ export interface OrganizationBranding {
 const BRANDING_STORAGE_KEY = "facetime_company_branding_v1";
 
 export const DEFAULT_BRANDING: OrganizationBranding = {
-  companyName: "FaceTime Technologies",
+  companyName: "SmileTime Technologies",
   customLogoUrl: "",
   kioskWelcomeTitle: "Biometric Attendance Terminal",
   kioskAnnouncement: "",

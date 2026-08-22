@@ -273,7 +273,7 @@ export function MonthlyReportViewer({ onClose }: MonthlyReportViewerProps) {
 
     const csvContent = generateCsvString(headers, rows);
     downloadCsvBlob(
-      `facetime_monthly_late_infractions_${monthLabel.replace(/\s+/g, "_")}.csv`,
+      `smiletime_monthly_late_infractions_${monthLabel.replace(/\s+/g, "_")}.csv`,
       csvContent,
     );
   };

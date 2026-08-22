@@ -23,7 +23,7 @@ import { useAuth } from "@/hooks/useAuth";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Authentication — FaceTime Attendance" },
+      { title: "Authentication — SmileTime Pro" },
       {
         name: "description",
         content: "Sign in, register company, or confirm email verification code.",
@@ -115,10 +115,8 @@ function AuthPage() {
           setFormError("This email is already registered. Please sign in.");
           setMode("signin");
         } else if (data?.session) {
-          // Direct login without email confirmation requirement - NO popup message
           navigate({ to: target });
         } else {
-          // Confirmation code required -> switch to verify mode
           setMode("verify");
         }
       } else if (mode === "verify") {
@@ -150,7 +148,6 @@ function AuthPage() {
         }
 
         if (data?.session) {
-          // Verified & Logged in - redirect directly with NO message
           navigate({ to: target });
         } else {
           setMode("signin");
@@ -179,7 +176,6 @@ function AuthPage() {
         }
 
         if (data.session) {
-          // Direct redirect with NO congratulatory/signed in popup message
           navigate({ to: target });
         }
       }
@@ -192,33 +188,36 @@ function AuthPage() {
   }
 
   return (
-    <main className="hero-surface min-h-screen flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md space-y-6">
+    <main className="min-h-screen bg-[#FAFAFB] flex items-center justify-center px-4 py-12 relative overflow-hidden font-sans">
+      {/* Soft Ambient Halo */}
+      <div className="bst-halo ln-halo--hero" />
+
+      <div className="relative w-full max-w-md space-y-6">
         {/* Brand Header */}
         <div className="text-center space-y-2 flex flex-col items-center">
           <Link to="/" className="inline-flex items-center gap-3 group">
-            <Logo size="lg" subtitle="Biometric Portal" />
+            <Logo size="lg" subtitle="Portal" />
           </Link>
-          <p className="text-xs text-slate-500 max-w-sm">
+          <p className="text-xs text-[#5C5A66] max-w-sm">
             AI-powered enterprise facial recognition workforce intelligence & attendance system.
           </p>
         </div>
 
         {/* Card Form */}
-        <Panel className="bg-white border border-slate-200 shadow-xl rounded-2xl p-6 sm:p-8">
+        <Panel className="bg-white border border-[#ECEBF0] shadow-[0_6px_24px_rgba(27,26,32,0.05)] rounded-[28px] p-6 sm:p-8">
           {/* Mode Switcher Tabs */}
           {mode !== "forgot" && mode !== "verify" && (
-            <div className="flex rounded-xl bg-slate-100 p-1 mb-6 border border-slate-200">
+            <div className="flex rounded-full bg-[#F3F2F6] p-1 mb-6 border border-[#ECEBF0]">
               <button
                 type="button"
                 onClick={() => {
                   setMode("signin");
                   setFormError(null);
                 }}
-                className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex-1 rounded-full py-2 text-xs font-semibold transition-all cursor-pointer ${
                   mode === "signin"
-                    ? "bg-white text-slate-900 shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-white text-[#1B1A20] shadow-xs"
+                    : "text-[#5C5A66] hover:text-[#1B1A20]"
                 }`}
               >
                 Sign In
@@ -229,10 +228,10 @@ function AuthPage() {
                   setMode("signup");
                   setFormError(null);
                 }}
-                className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex-1 rounded-full py-2 text-xs font-semibold transition-all cursor-pointer ${
                   mode === "signup"
-                    ? "bg-white text-slate-900 shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-white text-[#1B1A20] shadow-xs"
+                    : "text-[#5C5A66] hover:text-[#1B1A20]"
                 }`}
               >
                 Register Company
@@ -242,7 +241,7 @@ function AuthPage() {
 
           {/* Heading */}
           <div className="space-y-1 mb-6">
-            <h1 className="text-xl font-bold text-slate-900 font-display">
+            <h1 className="text-xl font-bold text-[#1B1A20] tracking-[-0.02em]">
               {mode === "signin"
                 ? "Sign in to company workspace"
                 : mode === "signup"
@@ -251,7 +250,7 @@ function AuthPage() {
                     ? "Confirm your email code"
                     : "Reset your password"}
             </h1>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[#5C5A66] leading-relaxed">
               {mode === "signin"
                 ? "Enter your work credentials to access staff records and terminal telemetry."
                 : mode === "signup"
@@ -265,14 +264,14 @@ function AuthPage() {
           {/* Forgot Password Success State */}
           {mode === "forgot" && resetSent ? (
             <div className="space-y-6 text-center py-4 animate-in fade-in zoom-in-95 duration-200">
-              <div className="h-14 w-14 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
+              <div className="h-14 w-14 rounded-full bg-[#EEF7F1] border border-[#B8E5C8] text-[#2F9E63] flex items-center justify-center mx-auto shadow-sm">
                 <CheckCircle2 className="h-7 w-7" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-base font-bold text-slate-900">Check Your Email</h3>
-                <p className="text-xs text-slate-600 max-w-xs mx-auto leading-relaxed">
+                <h3 className="text-base font-bold text-[#1B1A20]">Check Your Email</h3>
+                <p className="text-xs text-[#5C5A66] max-w-xs mx-auto leading-relaxed">
                   We have sent password reset instructions to{" "}
-                  <span className="font-semibold text-slate-900">{email}</span>. Please check your
+                  <span className="font-semibold text-[#1B1A20]">{email}</span>. Please check your
                   inbox.
                 </p>
               </div>
@@ -293,7 +292,7 @@ function AuthPage() {
               {formError && (
                 <div
                   role="alert"
-                  className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs font-medium text-rose-700"
+                  className="rounded-2xl border border-[#F5B8C4] bg-[#FDF1F3] px-3.5 py-2.5 text-xs font-semibold text-[#D64545]"
                 >
                   {formError}
                 </div>
@@ -311,28 +310,36 @@ function AuthPage() {
                       value={otpCode}
                       onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
                       placeholder="123456"
-                      className="text-center tracking-widest font-mono text-lg font-bold"
+                      className="text-center tracking-widest font-mono text-lg font-bold rounded-full"
                       required
                       autoFocus
                     />
                   </Field>
 
-                  <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                  <div className="flex items-center justify-between text-xs text-[#5C5A66] pt-1">
                     <span>Didn't receive the code?</span>
                     <button
                       type="button"
                       onClick={() => void handleResendOtp()}
                       disabled={resending}
-                      className="font-semibold text-indigo-600 hover:text-indigo-700 cursor-pointer inline-flex items-center gap-1"
+                      className="font-semibold text-[#1B1A20] hover:underline cursor-pointer inline-flex items-center gap-1"
                     >
                       <RefreshCw className={`h-3 w-3 ${resending ? "animate-spin" : ""}`} />
                       Resend Code
                     </button>
                   </div>
 
-                  <Button type="submit" loading={busy} size="lg" className="w-full">
-                    Confirm & Enter Workspace
-                  </Button>
+                  <span className="bst-btn-wrap w-full">
+                    <span className="bst-btn-halo" />
+                    <Button
+                      type="submit"
+                      loading={busy}
+                      size="lg"
+                      className="w-full bst-btn bst-btn--lg"
+                    >
+                      Confirm & Enter Workspace
+                    </Button>
+                  </span>
 
                   <div className="text-center pt-2">
                     <button
@@ -341,7 +348,7 @@ function AuthPage() {
                         setMode("signin");
                         setFormError(null);
                       }}
-                      className="text-xs text-slate-500 hover:text-slate-900 cursor-pointer"
+                      className="text-xs text-[#5C5A66] hover:text-[#1B1A20] cursor-pointer"
                     >
                       ← Back to Sign In
                     </button>
@@ -395,7 +402,7 @@ function AuthPage() {
                   {mode !== "forgot" && (
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-600 font-display">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#9B99A6]">
                           Password
                         </span>
                         {mode === "signin" && (
@@ -405,7 +412,7 @@ function AuthPage() {
                               setResetSent(false);
                               setMode("forgot");
                             }}
-                            className="text-xs text-indigo-600 hover:text-indigo-700 font-medium hover:underline cursor-pointer"
+                            className="text-xs text-[#5C5A66] hover:text-[#1B1A20] font-medium hover:underline cursor-pointer"
                           >
                             Forgot password?
                           </button>
@@ -429,7 +436,7 @@ function AuthPage() {
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9B99A6] hover:text-[#1B1A20] cursor-pointer p-1"
                         >
                           {showPassword ? (
                             <EyeOff className="h-4 w-4" />
@@ -441,13 +448,21 @@ function AuthPage() {
                     </div>
                   )}
 
-                  <Button type="submit" loading={busy} size="lg" className="w-full mt-2">
-                    {mode === "signin"
-                      ? "Sign in to workspace"
-                      : mode === "signup"
-                        ? "Register Company Workspace"
-                        : "Send Password Reset Link"}
-                  </Button>
+                  <span className="bst-btn-wrap w-full mt-2">
+                    <span className="bst-btn-halo" />
+                    <Button
+                      type="submit"
+                      loading={busy}
+                      size="lg"
+                      className="w-full bst-btn bst-btn--lg"
+                    >
+                      {mode === "signin"
+                        ? "Sign in to workspace"
+                        : mode === "signup"
+                          ? "Register Company Workspace"
+                          : "Send Password Reset Link"}
+                    </Button>
+                  </span>
 
                   {mode === "forgot" && (
                     <div className="text-center pt-2">
@@ -457,7 +472,7 @@ function AuthPage() {
                           setMode("signin");
                           setFormError(null);
                         }}
-                        className="text-xs text-slate-500 hover:text-slate-900 cursor-pointer"
+                        className="text-xs text-[#5C5A66] hover:text-[#1B1A20] cursor-pointer"
                       >
                         ← Back to Sign In
                       </button>
@@ -473,7 +488,7 @@ function AuthPage() {
         <div className="text-center">
           <Link
             to="/"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#5C5A66] hover:text-[#1B1A20] transition-colors"
           >
             <ArrowLeft className="h-3.5 w-3.5" /> Back to Homepage
           </Link>

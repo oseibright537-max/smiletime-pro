@@ -56,7 +56,7 @@ import { getBranding } from "@/lib/branding/branding-store";
 export const Route = createFileRoute("/kiosk")({
   head: () => ({
     meta: [
-      { title: "High-Speed Attendance Kiosk Terminal — FaceTime Biometrics" },
+      { title: "High-Speed Attendance Kiosk Terminal — SmileTime Pro" },
       {
         name: "description",
         content:
@@ -77,36 +77,31 @@ type Phase = "idle" | "searching" | "matching" | "result";
 
 const KIND_CONFIG: Record<
   Kind,
-  { label: string; tone: "success" | "primary" | "warning" | "accent"; color: string; desc: string }
+  { label: string; tone: "success" | "primary" | "warning" | "accent"; desc: string }
 > = {
   auto: {
     label: "Smart Auto",
     tone: "primary",
-    color: "bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-500",
     desc: "Auto-detects Clock In or Clock Out based on shift and attendance history",
   },
   check_in: {
     label: "Clock In",
     tone: "success",
-    color: "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500",
     desc: "Manual Shift Check-In",
   },
   check_out: {
     label: "Clock Out",
     tone: "primary",
-    color: "bg-blue-600 hover:bg-blue-700 text-white border-blue-500",
     desc: "Manual Shift Check-Out",
   },
   break_start: {
     label: "Break Start",
     tone: "warning",
-    color: "bg-amber-600 hover:bg-amber-700 text-white border-amber-500",
     desc: "Manual Break Start",
   },
   break_end: {
     label: "Break End",
     tone: "accent",
-    color: "bg-cyan-600 hover:bg-cyan-700 text-white border-cyan-500",
     desc: "Manual Break End",
   },
 };
@@ -418,11 +413,8 @@ function Kiosk() {
         let resolvedKind: ActionKind = "check_in";
 
         if (kindRef.current !== "auto") {
-          // Manual user override mode
           resolvedKind = kindRef.current;
         } else {
-          // SMART AUTO RESOLUTION:
-          // Check today's existing attendance events for this employee
           if (navigator.onLine) {
             try {
               const { data: todayLogs } = await supabase
@@ -436,33 +428,24 @@ function Kiosk() {
               const hasCheckOut = todayLogs?.some((e) => e.kind === "check_out");
 
               if (!hasCheckIn) {
-                // No clock-in today -> Action is automatically CLOCK IN
                 resolvedKind = "check_in";
               } else if (hasCheckIn && !hasCheckOut) {
-                // Already clocked in today, hasn't clocked out yet
-                // Check if we are in the evening departure window (after 4:40 PM / 16:40 = 1000m) or in test bypass mode
                 if (currentMinutesTotal >= 1000 || bypassShiftRules) {
                   resolvedKind = "check_out";
                 } else {
-                  // Clock-in is already logged and it is not clock-out time yet:
-                  // Silently ignore repeat scans during work hours without showing an error popup
                   busyRef.current = false;
                   setPhase("searching");
                   return;
                 }
               } else {
-                // Both clock-in and clock-out already logged today (shift complete):
-                // Silently ignore without showing disruptive "already taken attendance" error modal
                 busyRef.current = false;
                 setPhase("searching");
                 return;
               }
             } catch {
-              // Fallback based on time threshold (4:40 PM = 16:40 = 1000m)
               resolvedKind = currentMinutesTotal >= 1000 ? "check_out" : "check_in";
             }
           } else {
-            // Offline heuristic: After 4:40 PM (16:40), default to check_out; otherwise check_in
             resolvedKind = currentMinutesTotal >= 1000 ? "check_out" : "check_in";
           }
         }
@@ -472,7 +455,6 @@ function Kiosk() {
 
         if (!ruleCheck.allowed && !bypassShiftRules) {
           if (kindRef.current === "auto") {
-            // In smart auto mode, silently ignore ineligible scans
             busyRef.current = false;
             setPhase("searching");
             return;
@@ -504,7 +486,6 @@ function Kiosk() {
             .limit(1);
 
           if (recent && recent.length > 0) {
-            // User just logged this punch moments ago -> silently ignore without intrusive error modal
             busyRef.current = false;
             setPhase("searching");
             return;
@@ -519,7 +500,6 @@ function Kiosk() {
 
         // 5. OFFLINE EDGE VS ONLINE DATABASE RECORDING
         if (!navigator.onLine) {
-          // Offline Edge Punch
           enqueueOfflinePunch({
             employee_id: matchEmployeeId,
             employee_name: matchFullName,
@@ -529,18 +509,17 @@ function Kiosk() {
             local_date: localDateStr,
             confidence,
             liveness_score: 0.98,
-            device_label: "FaceTime Kiosk Terminal",
+            device_label: "SmileTime Kiosk Terminal",
           });
           isOfflineQueued = true;
         } else {
-          // Online Supabase Recording
           let recorded = false;
           try {
             const { data: rpcRes, error: rpcErr } = await supabase.rpc("log_attendance", {
               _employee_id: matchEmployeeId,
               _confidence: confidence,
               _liveness: 0.98,
-              _device_label: "FaceTime Attendance Terminal",
+              _device_label: "SmileTime Attendance Terminal",
               _tz: userTimeZone,
             });
 
@@ -566,11 +545,10 @@ function Kiosk() {
               local_date: localDateStr,
               confidence,
               liveness_score: 0.98,
-              device_label: "FaceTime Attendance Terminal",
+              device_label: "SmileTime Attendance Terminal",
             });
 
             if (insertError) {
-              // Fallback to offline queue if cloud insert failed
               enqueueOfflinePunch({
                 employee_id: matchEmployeeId,
                 employee_name: matchFullName,
@@ -580,7 +558,7 @@ function Kiosk() {
                 local_date: localDateStr,
                 confidence,
                 liveness_score: 0.98,
-                device_label: "FaceTime Kiosk Terminal",
+                device_label: "SmileTime Kiosk Terminal",
               });
               isOfflineQueued = true;
             }
@@ -680,18 +658,21 @@ function Kiosk() {
   // Auth check
   if (!loading && !user) {
     return (
-      <main className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
-        <div className="max-w-md w-full text-center p-8 bg-slate-900/90 border border-slate-800 shadow-2xl rounded-3xl backdrop-blur-xl">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 mb-4">
+      <main className="min-h-screen bg-[#131217] flex items-center justify-center px-4 font-sans">
+        <div className="max-w-md w-full text-center p-8 bg-[#1B1A20] border border-[#2B2934] shadow-2xl rounded-[28px]">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#C7B8F5]/10 border border-[#C7B8F5]/20 text-[#C7B8F5] mb-4">
             <ShieldAlert className="h-7 w-7" />
           </div>
-          <h1 className="text-xl font-bold text-white font-display">Terminal Station Standby</h1>
-          <p className="mt-2 text-xs text-slate-400 leading-relaxed">
+          <h1 className="text-xl font-semibold text-[#F4F3F7]">Terminal Station Standby</h1>
+          <p className="mt-2 text-xs text-[#A8A6B4] leading-relaxed">
             Please sign in with an authorized organization account to activate this kiosk.
           </p>
           <div className="mt-6">
             <Link to="/auth" search={{ next: "/kiosk" }}>
-              <Button size="lg" className="w-full justify-center">
+              <Button
+                size="lg"
+                className="w-full justify-center bg-[#F4F3F7] text-[#16151A] hover:bg-white"
+              >
                 Authorize Terminal Device
               </Button>
             </Link>
@@ -702,34 +683,34 @@ function Kiosk() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between p-4 sm:p-6 lg:p-8 relative overflow-hidden select-none font-sans">
-      {/* Soft Ambient Glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[650px] bg-indigo-600/10 rounded-full blur-[150px] pointer-events-none" />
+    <main className="min-h-screen bg-[#131217] text-[#F4F3F7] flex flex-col justify-between p-4 sm:p-6 lg:p-8 relative overflow-hidden select-none font-sans">
+      {/* Soft Ambient Triad Glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-gradient-to-tr from-[#C7B8F5]/10 via-[#F5B8C4]/10 to-[#B8E5C8]/10 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* Top Floating Glass Navigation Header */}
+      {/* Top Floating Navigation Header */}
       <header className="relative z-30 max-w-4xl w-full mx-auto flex items-center justify-between gap-4">
         {/* Left: Back Link & Terminal Title */}
         <div className="flex items-center gap-3">
           <Link
             to="/console"
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-slate-800/80 px-3.5 py-1.5 rounded-full transition-all shadow-xs"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#A8A6B4] hover:text-[#F4F3F7] bg-[#1B1A20] hover:bg-[#232128] border border-[#2B2934] px-4 py-1.5 rounded-full transition-all shadow-xs"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Console Hub</span>
           </Link>
-          <span className="text-xs text-slate-500 font-medium hidden md:inline truncate max-w-[180px]">
+          <span className="text-xs text-[#82808E] font-medium hidden md:inline truncate max-w-[180px]">
             {currentOrg?.name || "Biometric Kiosk"}
           </span>
         </div>
 
         {/* Center: Live Clock Capsule */}
-        <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-800/80 px-4 py-1.5 rounded-full shadow-lg backdrop-blur-md">
-          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-mono text-xs font-semibold text-slate-200 tracking-wider">
+        <div className="flex items-center gap-2 bg-[#1B1A20] border border-[#2B2934] px-4 py-1.5 rounded-full shadow-md">
+          <span className="h-2 w-2 rounded-full bg-[#2F9E63] animate-pulse" />
+          <span className="font-mono text-xs font-semibold text-[#F4F3F7] tracking-wider">
             {time || "00:00:00"}
           </span>
-          <span className="text-slate-600">·</span>
-          <span className="text-[11px] font-medium text-indigo-300">
+          <span className="text-[#82808E]">·</span>
+          <span className="text-[11px] font-semibold text-[#C7B8F5]">
             {KIND_CONFIG[kind].label}
           </span>
         </div>
@@ -737,7 +718,7 @@ function Kiosk() {
         {/* Right: Offline status & Settings toggle */}
         <div className="flex items-center gap-2">
           {!isOnline && (
-            <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] font-medium">
+            <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#FDF6E2]/10 border border-[#FDE68A]/20 text-[#FDE68A] text-[11px] font-medium">
               <WifiOff className="h-3 w-3" />
               <span>Offline ({pendingCount})</span>
             </div>
@@ -745,7 +726,7 @@ function Kiosk() {
           {isOnline && pendingCount > 0 && (
             <button
               onClick={() => void triggerSync()}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-[11px] font-medium cursor-pointer"
+              className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#EEF7F1]/10 border border-[#B8E5C8]/20 text-[#B8E5C8] text-[11px] font-medium cursor-pointer"
             >
               <RefreshCw className={`h-3 w-3 ${syncing ? "animate-spin" : ""}`} />
               <span>Sync {pendingCount}</span>
@@ -753,7 +734,7 @@ function Kiosk() {
           )}
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className="h-8 w-8 rounded-full bg-slate-900/80 hover:bg-slate-800 border border-slate-800/80 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer"
+            className="h-8 w-8 rounded-full bg-[#1B1A20] hover:bg-[#232128] border border-[#2B2934] flex items-center justify-center text-[#A8A6B4] hover:text-[#F4F3F7] transition-colors cursor-pointer"
             title="Terminal Settings"
           >
             <Sliders className="h-3.5 w-3.5" />
@@ -761,26 +742,26 @@ function Kiosk() {
         </div>
       </header>
 
-      {/* Settings Drawer (Collapsible) */}
+      {/* Settings Drawer */}
       {showSettings && (
-        <div className="relative z-30 max-w-2xl w-full mx-auto my-3 p-4 rounded-3xl bg-slate-900/95 border border-slate-800 shadow-2xl backdrop-blur-xl animate-in slide-in-from-top-2 duration-150 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-          <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-950/60 border border-slate-800/60">
+        <div className="relative z-30 max-w-2xl w-full mx-auto my-3 p-4 rounded-[24px] bg-[#1B1A20] border border-[#2B2934] shadow-2xl animate-in slide-in-from-top-2 duration-150 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div className="flex items-center justify-between p-3 rounded-2xl bg-[#131217] border border-[#2B2934]">
             <div>
-              <span className="font-semibold text-white block">Cached Profiles</span>
-              <span className="text-[11px] text-slate-400">{enrolledTemplates.length} active</span>
+              <span className="font-semibold text-[#F4F3F7] block">Cached Profiles</span>
+              <span className="text-[11px] text-[#82808E]">{enrolledTemplates.length} active</span>
             </div>
             <button
               onClick={() => void loadTemplates()}
-              className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-indigo-400 cursor-pointer"
+              className="p-1.5 rounded-full bg-[#232128] hover:bg-[#2B2934] text-[#C7B8F5] cursor-pointer"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${loadingTemplates ? "animate-spin" : ""}`} />
             </button>
           </div>
 
-          <div className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800/60">
+          <div className="p-3 rounded-2xl bg-[#131217] border border-[#2B2934]">
             <div className="flex items-center justify-between mb-1">
-              <span className="font-semibold text-white">Tolerance</span>
-              <span className="font-mono text-indigo-400 text-[11px]">{matchThreshold}</span>
+              <span className="font-semibold text-[#F4F3F7]">Tolerance</span>
+              <span className="font-mono text-[#C7B8F5] text-[11px]">{matchThreshold}</span>
             </div>
             <input
               type="range"
@@ -789,20 +770,20 @@ function Kiosk() {
               step="0.02"
               value={matchThreshold}
               onChange={(e) => setMatchThreshold(parseFloat(e.target.value))}
-              className="w-full h-1.5 bg-slate-800 rounded-lg accent-indigo-500 cursor-pointer"
+              className="w-full h-1.5 bg-[#2B2934] rounded-lg accent-[#C7B8F5] cursor-pointer"
             />
           </div>
 
-          <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-950/60 border border-slate-800/60">
+          <div className="flex items-center justify-between p-3 rounded-2xl bg-[#131217] border border-[#2B2934]">
             <div>
-              <span className="font-semibold text-white block">Shift Bypass</span>
-              <span className="text-[11px] text-slate-400">Test mode clocking</span>
+              <span className="font-semibold text-[#F4F3F7] block">Shift Bypass</span>
+              <span className="text-[11px] text-[#82808E]">Test mode clocking</span>
             </div>
             <input
               type="checkbox"
               checked={bypassShiftRules}
               onChange={(e) => setBypassShiftRules(e.target.checked)}
-              className="h-4 w-4 rounded border-slate-700 text-indigo-600 cursor-pointer"
+              className="h-4 w-4 rounded border-[#2B2934] accent-[#C7B8F5] cursor-pointer"
             />
           </div>
         </div>
@@ -810,7 +791,7 @@ function Kiosk() {
 
       {/* Centerpiece Viewfinder Canvas */}
       <section className="relative z-20 max-w-2xl w-full mx-auto my-auto flex flex-col items-center">
-        <div className="w-full aspect-[4/3] sm:aspect-[16/10] max-h-[68vh] rounded-[32px] sm:rounded-[40px] bg-slate-900 border border-slate-800/90 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden relative flex items-center justify-center">
+        <div className="w-full aspect-[4/3] sm:aspect-[16/10] max-h-[68vh] rounded-[32px] sm:rounded-[40px] bg-[#1B1A20] border border-[#2B2934] shadow-[0_20px_60px_rgba(0,0,0,0.6)] overflow-hidden relative flex items-center justify-center">
           {/* Camera Video View */}
           <video
             ref={videoRef}
@@ -820,29 +801,29 @@ function Kiosk() {
             className="h-full w-full scale-x-[-1] object-cover"
           />
 
-          {/* Minimalist Thin Corner Reticle Brackets */}
+          {/* Minimalist Corner Reticle */}
           <div className="absolute inset-8 sm:inset-12 pointer-events-none z-10 flex flex-col justify-between">
             <div className="flex justify-between">
-              <div className="w-6 h-6 border-t-2 border-l-2 border-white/30 rounded-tl-lg" />
-              <div className="w-6 h-6 border-t-2 border-r-2 border-white/30 rounded-tr-lg" />
+              <div className="w-6 h-6 border-t-2 border-l-2 border-[#C7B8F5]/60 rounded-tl-lg" />
+              <div className="w-6 h-6 border-t-2 border-r-2 border-[#C7B8F5]/60 rounded-tr-lg" />
             </div>
             <div className="flex justify-between">
-              <div className="w-6 h-6 border-b-2 border-l-2 border-white/30 rounded-bl-lg" />
-              <div className="w-6 h-6 border-b-2 border-r-2 border-white/30 rounded-br-lg" />
+              <div className="w-6 h-6 border-b-2 border-l-2 border-[#C7B8F5]/60 rounded-bl-lg" />
+              <div className="w-6 h-6 border-b-2 border-r-2 border-[#C7B8F5]/60 rounded-br-lg" />
             </div>
           </div>
 
           {/* Camera Standby Screen */}
           {!active && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-center p-8 bg-slate-950/95 backdrop-blur-xl z-30">
-              <div className="h-16 w-16 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shadow-xl">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-center p-8 bg-[#131217]/95 backdrop-blur-xl z-30">
+              <div className="h-16 w-16 rounded-full bg-[#C7B8F5]/10 border border-[#C7B8F5]/20 flex items-center justify-center text-[#C7B8F5] shadow-lg">
                 <ScanFace className="h-8 w-8" />
               </div>
               <div className="space-y-1 max-w-sm">
-                <h2 className="text-xl sm:text-2xl font-bold text-white font-display">
+                <h2 className="text-xl font-bold text-[#F4F3F7]">
                   {branding.kioskWelcomeTitle || "Biometric Kiosk Ready"}
                 </h2>
-                <p className="text-xs text-slate-400 leading-relaxed">
+                <p className="text-xs text-[#A8A6B4] leading-relaxed">
                   {error ?? "Automated shift intelligence with instant on-device face recognition."}
                 </p>
               </div>
@@ -852,7 +833,7 @@ function Kiosk() {
                 disabled={!modelsReady}
                 loading={!modelsReady}
                 icon={<Camera className="h-4 w-4" />}
-                className="mt-2 rounded-full px-6 shadow-lg shadow-indigo-600/30"
+                className="mt-2 rounded-full px-7 bg-[#F4F3F7] text-[#16151A] hover:bg-white"
               >
                 {modelsReady ? "Start Camera Terminal" : "Loading Neural Engine…"}
               </Button>
@@ -862,20 +843,20 @@ function Kiosk() {
           {/* Floating Subtle Live Hint */}
           {active && !result && (
             <div className="pointer-events-none absolute bottom-6 inset-x-0 flex justify-center z-20 px-4">
-              <div className="rounded-full bg-slate-950/80 border border-white/10 px-5 py-2 text-center text-xs sm:text-sm font-medium text-slate-200 shadow-xl backdrop-blur-xl">
+              <div className="rounded-full bg-[#131217]/85 border border-[#2B2934] px-5 py-2 text-center text-xs sm:text-sm font-medium text-[#F4F3F7] shadow-xl backdrop-blur-xl">
                 {hint}
               </div>
             </div>
           )}
 
-          {/* Celebratory Verified Modal (Apple Clean Minimalist Style) */}
+          {/* Celebratory Verified Result Popup */}
           {result && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-6 sm:p-8 text-center backdrop-blur-2xl z-30 animate-in fade-in zoom-in-95 duration-200">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#131217]/95 p-6 sm:p-8 text-center backdrop-blur-2xl z-30 animate-in fade-in zoom-in-95 duration-200">
               <div
                 className={`h-16 w-16 sm:h-20 sm:w-20 rounded-full flex items-center justify-center shadow-2xl ${
                   result.ok
-                    ? "bg-emerald-500/15 border-2 border-emerald-400 text-emerald-400 shadow-emerald-500/20"
-                    : "bg-rose-500/15 border-2 border-rose-400 text-rose-400 shadow-rose-500/20"
+                    ? "bg-[#2F9E63]/15 border-2 border-[#2F9E63] text-[#2F9E63]"
+                    : "bg-[#D64545]/15 border-2 border-[#D64545] text-[#D64545]"
                 }`}
               >
                 {result.ok ? (
@@ -887,17 +868,17 @@ function Kiosk() {
 
               <div className="space-y-1 max-w-full">
                 {result.greeting && (
-                  <span className="text-xs font-semibold text-emerald-400 uppercase tracking-widest block">
+                  <span className="text-xs font-semibold text-[#2F9E63] uppercase tracking-widest block">
                     {result.greeting}
                   </span>
                 )}
-                <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-white">
+                <h2 className="text-2xl sm:text-3xl font-bold text-[#F4F3F7]">
                   {result.name ?? (result.ok ? "Identity Verified" : "Access Denied")}
                 </h2>
               </div>
 
               {/* Action Capsule Badge */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-400/30 text-indigo-300 text-xs font-semibold">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#1B1A20] border border-[#2B2934] text-[#C7B8F5] text-xs font-semibold">
                 <span>
                   {result.actionKind === "check_in"
                     ? "Clocked In"
@@ -906,23 +887,23 @@ function Kiosk() {
                       : "Verified"}
                 </span>
                 <span>·</span>
-                <span className="text-slate-300">{time}</span>
+                <span className="text-[#F4F3F7]">{time}</span>
                 {result.statusLabel && (
                   <>
                     <span>·</span>
-                    <span className="text-emerald-400">{result.statusLabel}</span>
+                    <span className="text-[#2F9E63]">{result.statusLabel}</span>
                   </>
                 )}
               </div>
 
               {/* Milestone Encouragement */}
               {result.milestone && (
-                <p className="text-xs text-slate-300 max-w-sm font-medium mt-1">
+                <p className="text-xs text-[#A8A6B4] max-w-sm font-medium mt-1">
                   {result.milestone}
                 </p>
               )}
 
-              <p className="text-[11px] text-slate-400 max-w-sm leading-relaxed">
+              <p className="text-[11px] text-[#82808E] max-w-sm leading-relaxed">
                 {result.message}
               </p>
             </div>
@@ -932,15 +913,15 @@ function Kiosk() {
         {/* Minimalist Floating Controls Bar */}
         <div className="mt-4 flex items-center justify-center gap-2 max-w-md w-full">
           {/* Mode Pill Toggle */}
-          <div className="flex items-center bg-slate-900/90 border border-slate-800/90 rounded-full p-1 shadow-lg backdrop-blur-md">
+          <div className="flex items-center bg-[#1B1A20] border border-[#2B2934] rounded-full p-1 shadow-lg">
             {(["auto", "check_in", "check_out"] as Kind[]).map((k) => (
               <button
                 key={k}
                 onClick={() => setKind(k)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                   kind === k
-                    ? "bg-indigo-600 text-white shadow-xs"
-                    : "text-slate-400 hover:text-white"
+                    ? "bg-[#F4F3F7] text-[#16151A] shadow-xs"
+                    : "text-[#82808E] hover:text-[#F4F3F7]"
                 }`}
               >
                 {k === "auto" ? "Auto" : k === "check_in" ? "Clock In" : "Clock Out"}
@@ -951,7 +932,7 @@ function Kiosk() {
           {/* Quick Flip Cam */}
           <button
             onClick={() => void flipCamera()}
-            className="p-2.5 rounded-full bg-slate-900/90 hover:bg-slate-800 border border-slate-800/90 text-slate-400 hover:text-white transition-colors cursor-pointer shadow-lg backdrop-blur-md"
+            className="p-2.5 rounded-full bg-[#1B1A20] hover:bg-[#232128] border border-[#2B2934] text-[#A8A6B4] hover:text-[#F4F3F7] transition-colors cursor-pointer shadow-md"
             title="Flip Camera"
           >
             <SwitchCamera className="h-4 w-4" />
@@ -961,29 +942,29 @@ function Kiosk() {
           {active && (
             <button
               onClick={() => void handleManualScan()}
-              className="p-2.5 rounded-full bg-slate-900/90 hover:bg-slate-800 border border-slate-800/90 text-slate-400 hover:text-white transition-colors cursor-pointer shadow-lg backdrop-blur-md"
+              className="p-2.5 rounded-full bg-[#1B1A20] hover:bg-[#232128] border border-[#2B2934] text-[#C7B8F5] hover:text-white transition-colors cursor-pointer shadow-md"
               title="Trigger Instant Scan"
             >
-              <Zap className="h-4 w-4 text-indigo-400" />
+              <Zap className="h-4 w-4 text-[#C7B8F5]" />
             </button>
           )}
         </div>
       </section>
 
-      {/* Minimal Bottom Activity Strip (Last 3 Scans) */}
-      <footer className="relative z-20 max-w-3xl w-full mx-auto flex items-center justify-between text-xs text-slate-500 pt-2">
+      {/* Minimal Bottom Activity Strip */}
+      <footer className="relative z-20 max-w-3xl w-full mx-auto flex items-center justify-between text-xs text-[#82808E] pt-2">
         <div className="flex items-center gap-2 truncate">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          <span className="text-slate-400 font-medium">RAM Vector Processing</span>
+          <span className="h-1.5 w-1.5 rounded-full bg-[#2F9E63]" />
+          <span className="text-[#A8A6B4] font-medium">RAM Vector Processing</span>
           <span>·</span>
           <span>Zero Photo Storage</span>
         </div>
 
         {recentScans.length > 0 && (
-          <div className="hidden sm:flex items-center gap-2 text-[11px] text-slate-400">
-            <span className="text-slate-500">Latest:</span>
-            <span className="font-semibold text-slate-300">{recentScans[0]?.name}</span>
-            <span className="text-indigo-400">({recentScans[0]?.time})</span>
+          <div className="hidden sm:flex items-center gap-2 text-[11px] text-[#82808E]">
+            <span className="text-[#82808E]">Latest:</span>
+            <span className="font-semibold text-[#F4F3F7]">{recentScans[0]?.name}</span>
+            <span className="text-[#C7B8F5]">({recentScans[0]?.time})</span>
           </div>
         )}
       </footer>

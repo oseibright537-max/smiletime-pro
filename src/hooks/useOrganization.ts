@@ -18,7 +18,7 @@ export type Organization = {
 
 const DEFAULT_WORKSPACE: Organization = {
   id: "default-org",
-  name: "FaceTime Workspace",
+  name: "SmileTime Workspace",
   slug: "default",
   role: "admin",
 };

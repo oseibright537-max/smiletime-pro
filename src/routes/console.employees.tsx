@@ -30,7 +30,7 @@ import { downloadCsvBlob, generateCsvString } from "@/lib/export/downloader";
 export const Route = createFileRoute("/console/employees")({
   head: () => ({
     meta: [
-      { title: "Employee Directory & Enrollment — FaceTime Attendance" },
+      { title: "Employee Directory & Enrollment — SmileTime Pro" },
       {
         name: "description",
         content:
